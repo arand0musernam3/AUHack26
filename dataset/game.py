@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import os
 import glob
 import random
@@ -85,6 +84,63 @@ def apply_game_modifiers(df, powerup_type):
     modified_df = df.copy()
 
     # NOTE: Since you are using a single row dataframe in testing, this applies nicely.
+    """
+Powerup 1: The Polar Vortex (Winter focus)
+
+    Weather Modifier: temperature_2m drops by 15°C; wind_speed_100m increases by 30%; cloud_cover goes to 100%.
+
+    Strategic Impact:
+
+        Advantage (Wind): High wind speeds cause a massive spike in wind generation.
+
+        Disadvantage (Solar): Complete cloud cover kills solar output.
+
+        Disadvantage (Fossil): Extreme cold causes natural gas pipeline pressure drops and freezes coal reserves (simulating supply chain failure).
+
+        Consumption: Massive spike due to emergency heating. Players can use this to overload an opponent's grid and drive spot prices (price_EUR) through the roof.
+
+Powerup 2: The Heat Dome (Summer focus)
+
+    Weather Modifier: temperature_2m increases by 12°C; precipitation drops to 0 mm; cloud_cover drops to 0%.
+
+    Strategic Impact:
+
+        Advantage (Solar): Perfectly clear skies maximize solar output.
+
+        Disadvantage (Water): Simulates flash droughts, reducing run-of-river and reservoir levels.
+
+        Disadvantage (Nuclear): In Europe (especially France/FR), nuclear plants rely on river water for cooling. During severe heatwaves, river temperatures get too high to discharge cooling water, forcing reactors to throttle down.
+
+        Consumption: High spike due to air conditioning.
+
+Powerup 3: The Torrential Monsoon
+
+    Weather Modifier: precipitation increases by 20 mm/h; wind_speed_100m drops by 40%; cloud_cover goes to 90%.
+
+    Strategic Impact:
+
+        Advantage (Water): Fills reservoirs and maximizes hydro production.
+
+        Advantage (Fossil): With wind and solar crippled, baseload fossil fuels become highly profitable to fill the gap.
+
+        Disadvantage (Wind & Solar): Low winds and high clouds cripple the renewable sector.
+
+        Consumption: Slight decrease (people stay indoors, temperatures usually moderate).
+
+Powerup 4: The Stagnant Anticyclone (Dead Calm)
+
+    Weather Modifier: wind_speed_100m drops to 0 km/h; cloud_cover drops to 10%; temperature_2m normalizes to a mild 20°C.
+
+    Strategic Impact:
+
+        Advantage (Nuclear & Fossil): The ultimate baseload buff. With no wind, these traditional power plants dictate the market.
+
+        Advantage (Solar): Clear skies provide good daytime generation.
+
+        Disadvantage (Wind): Complete stand-still for wind turbines (the "Dunkelflaute" effect, though without the darkness).
+
+        Consumption: Baseline/Low. Mild weather means neither heating nor heavy AC is needed.
+    """
     modifiers = {
         'POLAR_VORTEX': {'Wind': 1.30, 'Solar': 0.10, 'Fossil': 0.95, 'Nuclear': 1.0, 'Water': 1.0, 'Consumption': 1.15,
                          'Price': 1.20},
