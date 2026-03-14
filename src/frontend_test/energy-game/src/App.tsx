@@ -9,14 +9,14 @@ import './App.css';
 const EnergyClient = Client({
   game: EnergyGame,
   board: GameBoard,
-  multiplayer: SocketIO({server: 'http://localhost:8000'}),
+  multiplayer: SocketIO({server: 'http://10.192.50.21:8000'}),
   debug: true,
 });
 
 const App = () => {
   const [operatorName, setOperatorName] = useState<string | null>(null);
 
-  console.log('Player Joined with info', EnergyClient.multiplayer);
+  //console.log('Player Joined with info', EnergyClient.multiplayer);
 
   if (!operatorName) {
     console.log('Showing Login component');
@@ -35,7 +35,7 @@ const App = () => {
 
   return (
     <div className="app">
-      <EnergyClient playerID="0" />
+      <EnergyClient playerID={operatorName} />
     </div>
   );
 };

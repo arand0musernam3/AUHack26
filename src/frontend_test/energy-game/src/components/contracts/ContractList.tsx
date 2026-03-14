@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Contract } from '../../game/types';
+import { BidForm } from './BidForm';
 
 interface ContractListProps {
   contracts?: Record<string, Contract>;
   title?: string;
+  onBid?: (tradeId: string, price: number, volume: number) => void;
 }
 
 export const ContractList: React.FC<ContractListProps> = ({ 
   contracts = {}, 
-  title = "Available Contracts" 
+  title = "Available Contracts",
+  onBid
 }) => {
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const contractCount = Object.keys(contracts).length;
 
   return (
@@ -55,6 +59,7 @@ export const ContractList: React.FC<ContractListProps> = ({
               </div>
               <button 
                 className="mono"
+                onClick={() => setSelectedContract(contract)}
                 style={{
                   width: '100%',
                   marginTop: '15px',
@@ -73,6 +78,19 @@ export const ContractList: React.FC<ContractListProps> = ({
           ))
         )}
       </div>
+
+      {selectedContract && (
+        <BidForm 
+          contract={selectedContract}
+          onClose={() => setSelectedContract(null)}
+          onSubmit={(price, volume) => {
+            if (onBid) {
+              onBid(selectedContract.contract_id, price, volume);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
+

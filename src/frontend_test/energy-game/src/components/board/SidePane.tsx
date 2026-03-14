@@ -30,7 +30,13 @@ export const SidePane: React.FC<SidePaneProps> = ({ G, ctx, playerID, moves }) =
   const renderTabContent = () => {
     switch (activeTab) {
       case 'market':
-        return <ContractList contracts={G.contracts} title="Market Terminal" />;
+        return (
+          <ContractList 
+            contracts={G.contracts} 
+            title="Market Terminal" 
+            onBid={(tradeId, price, volume) => moves.submitBid(tradeId, price, volume)}
+          />
+        );
       case 'portfolio':
         return <PortfolioTab G={G} playerID={playerID} ctx={ctx} />;
       case 'operator':
