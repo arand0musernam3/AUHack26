@@ -1,2 +1,5 @@
 # AUHack26
-tbd
+## frontend
+`npx vite --host`
+
+## backend

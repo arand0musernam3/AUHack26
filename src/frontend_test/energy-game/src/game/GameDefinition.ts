@@ -1,10 +1,12 @@
-import { INVALID_MOVE } from "boardgame.io/core";
-import type { Ctx } from "boardgame.io";
+import { INVALID_MOVE } from 'boardgame.io/dist/cjs/core.js';
+import type { Ctx } from 'boardgame.io';
 import type {
   EnergyType,
   Contract,
   Conduct,
   ActionCardType,
+  ActionCardInstance,  // add this
+  RouteStep,           // add this
   GameState,
 } from "./types";
 
@@ -111,86 +113,88 @@ const ACTION_CARD_TYPES: ActionCardType[] = [
 
 export const EnergyGame = {
   name: "energy-market",
+  maxPlayers: 5,
 
   setup: ({ ctx }: { ctx: Ctx }): GameState => {
-    const player_balances: Record<string, number> = {};
-    const action_cards: Record<string, ActionCardInstance[]> = {};
+  const player_balances: Record<string, number> = {};
+  const action_cards: Record<string, ActionCardInstance[]> = {};
 
-    for (let i = 0; i < ctx.numPlayers; i++) {
-      const playerId = i.toString();
-      player_balances[playerId] = 100000;
+  // Create player data for all 5 potential players
+  for (let i = 0; i < 5; i++) {
+    const playerId = i.toString();
+    player_balances[playerId] = 100000;
 
-      const numCards = i === 0 ? 5 : 2;
-      action_cards[playerId] = Array.from({ length: numCards }).map(
-        (_, cardIndex) => ({
-          card_id: `card-${playerId}-${cardIndex}`,
-          type: ACTION_CARD_TYPES[
-            Math.floor(Math.random() * ACTION_CARD_TYPES.length)
-          ],
-          face_down: false,
-        }),
-      );
-    }
+    const numCards = i === 0 ? 5 : 2;
+    action_cards[playerId] = Array.from({ length: numCards }).map(
+      (_, cardIndex) => ({
+        card_id: `card-${playerId}-${cardIndex}`,
+        type: ACTION_CARD_TYPES[
+          Math.floor(Math.random() * ACTION_CARD_TYPES.length)
+        ],
+        face_down: false,
+      }),
+    );
+  }
 
-    const contracts = generateMockContracts();
+  const contracts = generateMockContracts();
 
-    Object.keys(contracts).forEach((id) => {
-      if (Math.random() > 0.7) {
-        const numBids = Math.floor(Math.random() * 3) + 1;
-        for (let i = 0; i < numBids; i++) {
-          const biddingPlayerId = Math.floor(
-            Math.random() * ctx.numPlayers,
-          ).toString(); // ✅ fixed
-          contracts[id].bids.push({
-            player_id: biddingPlayerId,
-            price:
-              contracts[id].base_price + Math.floor(Math.random() * 20) + 5,
-            volume:
-              Math.floor(Math.random() * (contracts[id].available_volume / 2)) +
-              10,
-          });
-        }
+  Object.keys(contracts).forEach((id) => {
+    if (Math.random() > 0.7) {
+      const numBids = Math.floor(Math.random() * 3) + 1;
+      for (let i = 0; i < numBids; i++) {
+        const biddingPlayerId = Math.floor(
+          Math.random() * 5, // Use 5 instead of ctx.numPlayers
+        ).toString();
+        contracts[id].bids.push({
+          player_id: biddingPlayerId,
+          price:
+            contracts[id].base_price + Math.floor(Math.random() * 20) + 5,
+          volume:
+            Math.floor(Math.random() * (contracts[id].available_volume / 2)) +
+            10,
+        });
       }
-    });
+    }
+  });
 
-    return {
-      phase_number: 1,
-      contracts,
-      player_balances,
-      ready_players: [],
-      conducts: generateMockConducts(),
-      action_cards,
-      played_cards: [],
-      forecast: {
-        description: "High winds expected in the North Sea",
-        affected_country: "DK",
-        probability: 0.8,
-        weather_feature: "wind_speed_10m (km/h)",
-        direction: "increase",
-      },
-    };
-  },
+  return {
+    phase_number: 1,
+    contracts,
+    player_balances,
+    ready_players: [],
+    conducts: generateMockConducts(),
+    action_cards,
+    played_cards: [],
+    forecast: {
+      description: "High winds expected in the North Sea",
+      affected_country: "DK",
+      probability: 0.8,
+      weather_feature: "wind_speed_10m (km/h)",
+      direction: "increase",
+    },
+  };
+},
 
   phases: {
     forecasting: {
       start: true,
       next: "actionDeployment",
       onBegin: ({ G }: { G: GameState }) => { G.ready_players = []; },
-      endIf: ({ G }: { G: GameState }) => G.ready_players.length >= 1,
+      endIf: ({ G, ctx }: { G: GameState, ctx: Ctx }) => G.ready_players.length >= ctx.numPlayers,
     },
     actionDeployment: {
       next: "bidding",
       onBegin: ({ G, ctx }: { G: GameState; ctx: Ctx }) => {
         G.ready_players = [];
       },
-      endIf: ({ G }: { G: GameState }) => G.ready_players.length >= 1,
+      endIf: ({ G, ctx }: { G: GameState, ctx: Ctx }) => G.ready_players.length >= ctx.numPlayers,
     },
     bidding: {
       next: "resolution",
       onBegin: ({ G, ctx }: { G: GameState; ctx: Ctx }) => {
         G.ready_players = [];
       },
-      endIf: ({ G }: { G: GameState }) => G.ready_players.length >= 1,
+      endIf: ({ G, ctx }: { G: GameState, ctx: Ctx }) => G.ready_players.length >= ctx.numPlayers,
     },
     resolution: {
       next: "forecasting",
@@ -199,7 +203,7 @@ export const EnergyGame = {
         console.warn("Resolution logic is not fully implemented yet");
         G.ready_players = [];
       },
-      endIf: ({ G }: { G: GameState }) => G.ready_players.length >= 1,
+      endIf: ({ G, ctx }: { G: GameState, ctx: Ctx }) => G.ready_players.length >= ctx.numPlayers,
     }
   },
 

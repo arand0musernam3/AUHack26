@@ -1,5 +1,6 @@
 import { Server, Origins } from 'boardgame.io/dist/cjs/server.js';
-import { EnergyGame } from './game/GameDefinition';
+import { EnergyGame } from '../energy-game/src/game/GameDefinition';
+import crypto from 'node:crypto';
 
 const server = Server({
   games: [EnergyGame],

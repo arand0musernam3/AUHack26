@@ -1,41 +1,47 @@
 import { useState } from 'react';
 import { Client } from 'boardgame.io/react';
+import { LobbyClient } from 'boardgame.io/client';
 import { EnergyGame } from './game/GameDefinition';
 import { GameBoard } from './components/board/GameBoard';
 import { Login } from './components/lobby/Login';
-import { Local, SocketIO } from 'boardgame.io/multiplayer';
+import { SocketIO } from 'boardgame.io/multiplayer';
 import './App.css';
+
+const server = 'http://localhost:8000';
+const lobbyClient = new LobbyClient({ server });
 
 const EnergyClient = Client({
   game: EnergyGame,
   board: GameBoard,
-  multiplayer: SocketIO({server: 'http://10.192.50.21:8000'}),
+  multiplayer: SocketIO({ server }),
   debug: true,
 });
 
 const App = () => {
-  const [operatorName, setOperatorName] = useState<string | null>(null);
+  const [gameConfig, setGameConfig] = useState<{
+    playerID: string;
+    credentials: string;
+  } | null>(null);
 
-  //console.log('Player Joined with info', EnergyClient.multiplayer);
-
-  if (!operatorName) {
-    console.log('Showing Login component');
+  if (!gameConfig) {
     return (
-      <div className="app" data-testid="login-view">
-        <Login onLogin={(name) => {
-          setOperatorName(name);
-          // Here we would also want to connect to the game server and join a game room
-        }} />
-        <div style={{ position: 'fixed', bottom: 10, right: 10, fontSize: '10px', color: '#333' }}>
-          DEBUG: LOGIN_VIEW_ACTIVE
-        </div>
+      <div className="app">
+        <Login 
+          lobbyClient={lobbyClient} 
+          gameName="energy-market"
+          onJoin={(id, creds) => setGameConfig({ playerID: id, credentials: creds })} 
+        />
       </div>
     );
   }
 
   return (
     <div className="app">
-      <EnergyClient playerID={operatorName} />
+      {/* Pass both playerID AND credentials to the client */}
+      <EnergyClient 
+        playerID={gameConfig.playerID} 
+        credentials={gameConfig.credentials} 
+      />
     </div>
   );
 };
