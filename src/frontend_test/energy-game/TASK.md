@@ -83,6 +83,11 @@ src/
 
 ## Game Phases (UI States to Implement)
 
+The screen is divided in three main sectionns:
+1. **Left 60%**: `EuropeMap` with countries, conducts, and active overlays.
+2. **Right 40%**: Phase-specific UI, we have the game log, the contracts and the player stats. Divided into tabs.
+3. Bottom bar: where we have the player's hand of action cards and the "Ready" button.
+
 ### Phase 1 — Market Forecasting
 - Display the **Forecast Card** prominently (weather event, affected country, probability).
 - Render all **27 contracts** (9 countries × 3 each) in `ContractList`.
@@ -365,7 +370,8 @@ For each won contract that needs routing:
 
 ## Deliverables Checklist
 
-- [ ] `GameDefinition.ts` — all 4 phases, all 5 moves defined
+- [x] `GameDefinition.ts` — basic structure and phases defined
+- [ ] `GameDefinition.ts` — full move logic and phase transitions
 - [ ] `EuropeMap.tsx` — countries + conduct lines + markers rendering
 - [ ] `ContractList.tsx` + `ContractCard.tsx` + `BidForm.tsx`
 - [ ] `ActionCardHand.tsx` + `ActionCardTile.tsx` + `CardPlayModal.tsx`
@@ -374,7 +380,24 @@ For each won contract that needs routing:
 - [ ] `PhaseHeader.tsx` + `Timer.tsx`
 - [ ] `RouteOverlay.tsx` + routing click logic in `EuropeMap.tsx`
 - [ ] `PlayerList.tsx` + `Toast.tsx`
-- [ ] All TypeScript types in `game/types.ts`
+- [x] All TypeScript types in `game/types.ts`
 - [ ] Lobby / pre-game screen
-- [ ] Boardgame.io `Client` wired in `App.tsx`
-- [ ] Full visual design system (CSS variables, energy colors, typography)
+- [x] Boardgame.io `Client` wired in `App.tsx`
+- [x] Full visual design system (CSS variables, energy colors, typography)
+
+---
+
+## Progress Report
+
+### Completed
+- **Project Scaffolding**: Created directory structure for `game`, `components`, `hooks`, and `utils`.
+- **Type Definitions**: Implemented `src/game/types.ts` with all core game entities.
+- **Game Core**: Set up `src/game/GameDefinition.ts` with basic phase structure.
+- **UI Framework**: Wired `boardgame.io` React Client in `src/App.tsx`.
+- **Design System**: Established CSS variables and base styles in `src/index.css`.
+- **Dependencies**: Installed `boardgame.io` and `react-simple-maps`.
+- *Map Implementation*: Setup the basic europe map
+
+### Next Steps (Missing)
+1. Create the initial login screen and lobby for players to join.
+2. Implement the general UI layout as described in the spec.
