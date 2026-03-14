@@ -1,0 +1,12 @@
+{
+  "type": "module",
+  "scripts": {
+    "start": "node serve.js"
+  },
+  "dependencies": {
+    "boardgame.io": "^0.50.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
+}
