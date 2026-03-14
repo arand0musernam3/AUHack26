@@ -44,10 +44,12 @@ export const SidePane: React.FC<SidePaneProps> = ({ G, ctx, playerID, moves }) =
           <OperatorTab 
             playerID={playerID}
             playerBalances={playerBalances}
+            playerNames={G.player_names || {}}
             readyPlayers={readyPlayers}
             actionCards={actionCards || []}
             onBuyCard={() => moves.buyActionCard()}
             onDeployCard={(cardId) => moves.playActionCard(cardId)}
+            ctx={ctx}
           />
         );
       default:

@@ -4,21 +4,26 @@ import type { ActionCardInstance } from '../../game/types';
 interface OperatorTabProps {
   playerID: string;
   playerBalances: Record<string, number>;
+  playerNames: Record<string, string>;
   readyPlayers: string[];
   actionCards: ActionCardInstance[];
   onBuyCard: () => void;
   onDeployCard: (cardId: string) => void;
+  ctx: any;
 }
 
 export const OperatorTab: React.FC<OperatorTabProps> = ({ 
   playerID, 
   playerBalances, 
+  playerNames,
   readyPlayers, 
   actionCards,
   onBuyCard,
-  onDeployCard
+  onDeployCard,
+  ctx
 }) => {
   const localBalance = playerBalances[playerID] || 0;
+  const localName = playerNames[playerID] || ctx.playerMetadata?.[playerID]?.name || `OP_${playerID}`;
 
   return (
     <div className="tab-content" style={{ padding: '20px', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
@@ -27,7 +32,7 @@ export const OperatorTab: React.FC<OperatorTabProps> = ({
         <div style={{ fontSize: '0.7rem', color: 'var(--color-wind)', letterSpacing: '1px', marginBottom: '10px', fontWeight: 'bold' }}>LOCAL OPERATOR STATUS</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)' }}>ID: {playerID}</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)' }}>NAME: {localName}</div>
             <div className="mono" style={{ fontSize: '1.4rem', color: 'var(--text-main)' }}>
               € {localBalance.toLocaleString()}
             </div>
@@ -123,7 +128,11 @@ export const OperatorTab: React.FC<OperatorTabProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {Object.entries(playerBalances).map(([id, balance]) => {
             if (id === playerID) return null;
+            
+            // source the name from wherever available
+            const name = playerNames[id] || ctx.playerMetadata?.[id]?.name || `OP_${id}`;
             const isReady = readyPlayers.includes(id);
+
             return (
               <div key={id} style={{ 
                 display: 'flex', 
@@ -141,7 +150,7 @@ export const OperatorTab: React.FC<OperatorTabProps> = ({
                     background: isReady ? 'var(--color-nuclear)' : 'var(--text-dim)',
                     boxShadow: isReady ? '0 0 5px var(--color-nuclear)' : 'none'
                   }}></div>
-                  <span className="mono" style={{ fontSize: '0.8rem' }}>OP_{id}</span>
+                  <span className="mono" style={{ fontSize: '0.8rem' }}>{name}</span>
                 </div>
                 <span className="mono" style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>€ {balance.toLocaleString()}</span>
               </div>

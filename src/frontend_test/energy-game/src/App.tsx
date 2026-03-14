@@ -7,7 +7,7 @@ import { GameBoard } from "./components/board/GameBoard";
 import { Local, SocketIO } from "boardgame.io/multiplayer";
 import "./App.css";
 
-const server = "http://10.192.50.21:8000";
+const server = "http://localhost:8000";
 const lobbyClient = new LobbyClient({ server });
 
 const EnergyClient = Client({

@@ -3,6 +3,7 @@ import type { GameState } from '../../game/types';
 import { PhaseHeader } from './PhaseHeader';
 import { MapPane } from './MapPane';
 import { SidePane } from './SidePane';
+import { useEffect } from 'react';
 
 export interface BoardProps {
   G: GameState;
@@ -13,16 +14,29 @@ export interface BoardProps {
     routeEnergy: (contractId: string, route: any[]) => void;
     buyActionCard: () => void;
     markReady: () => void;
+    setPlayerName: (name: string) => void;
   };
   playerID: string;
   isActive: boolean;
   isMultiplayer: boolean;
 }
 
-import { useEffect, useState } from 'react';
-
 export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => {
-  // Guard against undefined G or properties
+  // Sync name from Lobby metadata
+  useEffect(() => {
+    if (!ctx.playerMetadata) return;
+
+    // Check all players, not just local, to help sync the whole state
+    Object.keys(ctx.playerMetadata).forEach(id => {
+      const name = ctx.playerMetadata[id]?.name;
+      if (name && name.trim() !== "" && G.player_names[id] !== name) {
+        console.log(`[GameBoard] Syncing name for ${id}: ${name}`);
+        moves.setPlayerName(name);
+      }
+    });
+  }, [ctx.playerMetadata, G.player_names, moves]);
+
+  // Guard against undefined G
   if (!G) {
     return <div className="loading">Initializing Terminal...</div>;
   }
@@ -33,10 +47,16 @@ export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => 
   return (
     <div className="game-board">
       <PhaseHeader 
-        phase={G.current_period + " " + G.periods_completed?.length + "/15"}
-        onTimerExpiry={() => moves.markReady()}
+        phase={ctx.phase || "loading"}
+        onTimerExpiry={() => {
+          if (!isReady) moves.markReady();
+        }}
         isReady={isReady}
-        onReadyClick={() => moves.markReady()}
+        onReadyClick={() => {
+          if (!isReady) moves.markReady();
+        }}
+        currentDay={G.current_day}
+        currentPeriod={G.current_period ? G.current_period.toString() : "1"}
       />
 
       <main className="game-layout">

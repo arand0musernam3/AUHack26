@@ -6,7 +6,7 @@ export type ActionCardType =
   | 'CUT_CONDUCT' | 'FIX_CONDUCT' | 'DISCOUNT_CONDUCT'
   | 'NOPE_CARD';
 
-export type DayPeriod = 'morning' | 'afternoon' | 'evening';
+export type DayPeriod = 1 | 2 | 3;
 
 export interface Bid {
   player_id: string;
@@ -83,6 +83,7 @@ export interface GameState {
   phase_number: number;
   contracts: Record<string, Contract>;
   player_balances: Record<string, number>;
+  player_names: Record<string, string>;
   ready_players: string[];
   conducts: Conduct[];
   // Frontend additions (derived or local):
@@ -95,6 +96,8 @@ export interface GameState {
   current_period: DayPeriod;
   periods_completed: DayPeriod[];
   phase_deadline: number | null;  // Unix ms timestamp, null when no timer is active
+  current_day: number;
+  total_days: number;
 }
 export interface RouteStep {
   originCountryId: string;
