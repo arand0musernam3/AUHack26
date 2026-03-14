@@ -1,10 +1,4 @@
-export type EnergyType = 'Wind' | 'Solar' | 'Water' | 'Fossil' | 'Nuclear';
-
-export type ActionCardType =
-  | 'POLAR_VORTEX' | 'HEAT_DOME' | 'MONSOON' | 'DEAD_CALM'
-  | 'BOOST_ENERGY' | 'NERF_ENERGY'
-  | 'CUT_CONDUCT' | 'FIX_CONDUCT' | 'DISCOUNT_CONDUCT'
-  | 'NOPE_CARD';
+export type EnergyType = "Wind" | "Solar" | "Water" | "Fossil" | "Nuclear";
 
 export type DayPeriod = 1 | 2 | 3;
 
@@ -18,11 +12,11 @@ export interface Bid {
 export interface Contract {
   contract_id: string;
   origin_country: string;
+  delivery_country: string;
   energy_type: EnergyType;
   available_volume: number;
   base_price: number;
   bids: Bid[];
-  delivery_country: string; // default "GER"
   delivery_day: number;
 }
 
@@ -45,30 +39,60 @@ export interface Conduct {
   base_cost: number;
   volume_capacity: number;
   is_broken: boolean;
+  discount_active: boolean;
 }
+
+export type ActionCardType =
+  | "POLAR_VORTEX"
+  | "HEAT_DOME"
+  | "MONSOON"
+  | "DEAD_CALM"
+  | "BOOST_ENERGY"
+  | "NERF_ENERGY"
+  | "CUT_CONDUCT"
+  | "FIX_CONDUCT"
+  | "DISCOUNT_CONDUCT";
 
 export interface ActionCardInstance {
   card_id: string;
   type: ActionCardType;
   face_down: boolean;
+  duration: number; // For weather/price: days. For pipes: user specified rounds/days.
 }
 
 export interface PlayedCard {
   player_id: string;
   card: ActionCardInstance;
   target_country?: string;
-  target_trade_id?: string;
-  rounds_remaining: number; // effects last up to 3 rounds, decreasing probability
+  target_pipe?: { from: string; to: string };
 }
 
-export type WeatherFeature =
-  | 'temperature_2m (°C)'
-  | 'wind_speed_10m (km/h)'
-  | 'cloud_cover (%)'
-  | 'precipitation (mm)';
+export interface ActiveModifier {
+  type: ActionCardType;
+  remaining_days: number;
+  original_duration: number;
+}
+
+export interface ActivePipeModifier {
+  type: ActionCardType;
+  remaining_rounds: number; // Conduct mods use rounds (1-3)
+  target: { from: string; to: string };
+}
+
+export interface RouteStep {
+  country: string;
+  cost: number;
+}
 
 export interface WeatherDataPoint {
   time: string;
+  Wind: number;
+  Solar: number;
+  Water: number;
+  Fossil: number;
+  Nuclear: number;
+  Consumption: number;
+  Price: number;
   temperature: number;
   wind_speed: number;
   cloud_cover: number;
@@ -78,18 +102,12 @@ export interface WeatherDataPoint {
   mix_percentages?: Record<string, number>;
 }
 
-export interface CountryWeatherData {
+export interface WeatherDataEntry {
   current: WeatherDataPoint;
-  forecast: WeatherDataPoint[]; // next 3 days
+  forecast: WeatherDataPoint[];
 }
 
-export interface ForecastCard {
-  description: string;         // e.g., "Cold front likely in Scandinavia"
-  affected_country: string;
-  probability: number;         // 0–1
-  weather_feature: WeatherFeature;
-  direction: 'increase' | 'decrease';
-}
+export type CountryWeatherData = Record<string, WeatherDataEntry>;
 
 export interface Pipe {
   from: string;
@@ -104,11 +122,12 @@ export interface GameState {
   player_names: Record<string, string>;
   ready_players: string[];
   conducts: Conduct[];
-  // Frontend additions (derived or local):
-  forecast?: ForecastCard;
-  action_cards: Record<string, ActionCardInstance[]>; // keyed by player_id
-  played_cards: PlayedCard[];
-  weather_data: Record<string, CountryWeatherData>;
+  action_cards: Record<string, ActionCardInstance[]>;
+  played_cards: PlayedCard[]; 
+  active_modifiers: Record<string, ActiveModifier[]>; 
+  active_pipe_modifiers: ActivePipeModifier[];
+  weather_data: CountryWeatherData;
+  modified_weather_data: CountryWeatherData;
   current_date: string;
   pipes: Pipe[];
   current_period: DayPeriod;
@@ -126,4 +145,6 @@ export interface RouteStep {
 export interface RouteStep {
   originCountryId: string;
   conductId: string;
+  phase_deadline: number | null;
+  resolution_log: string[];
 }
