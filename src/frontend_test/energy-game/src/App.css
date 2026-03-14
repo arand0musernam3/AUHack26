@@ -1,33 +1,152 @@
-/* Make login card fullscreen */
-.login-card {
-  width: 100%;
-  max-width: 100%;          /* was 600px */
-  height: 100vh;            /* fill vertically */
-  max-height: 100vh;        /* was 90vh */
-  overflow-y: auto;
-  box-sizing: border-box;
-  border: none;             /* optional: remove border at fullscreen */
-  box-shadow: none;         /* optional: cleaner fullscreen look */
+/* Root and Basic styling */
+:root {
+  --bg-dark: #0a0c0f;
+  --bg-card: #15191e;
+  --border-color: #1e2a38;
+  --color-wind: #00e5ff;
+  --text-main: #e0e6ed;
+  --text-dim: #94a3b8;
+  --font-data: 'JetBrains Mono', 'Courier New', monospace;
 }
 
-/* Remove the centering constraint so card fills the container */
-.login-container {
-  align-items: stretch;     /* was center */
-  justify-content: stretch; /* was center */
+/* Lobby Wrapper and Layout */
+.lobby-wrapper {
+  min-height: 100vh;
+  width: 100vw;
+  background: radial-gradient(circle at center, #1a202c 0%, #0a0c0f 100%);
+  color: var(--text-main);
+  font-family: var(--font-data);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4rem 2rem;
+  box-sizing: border-box;
+}
+
+.lobby-header {
+  text-align: center;
+  margin-bottom: 3rem;
+  width: 100%;
+  max-width: 800px;
+}
+
+.login-title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 6px;
+  background: linear-gradient(180deg, #fff 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.login-subtitle {
+  color: var(--color-wind);
+  font-size: 1rem;
+  letter-spacing: 3px;
+  margin-top: 0.5rem;
+  opacity: 0.8;
+}
+
+/* boardgame.io Lobby CSS Overrides */
+.bgio-lobby {
+  width: 100%;
+  max-width: 1000px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 2rem;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+}
+
+/* Align buttons horizontally in the room list and other areas */
+.bgio-lobby button {
+  font-family: var(--font-data);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: transparent;
+  border: 1px solid var(--color-wind);
+  color: var(--color-wind);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin: 0 5px;
+}
+
+.bgio-lobby button:hover:not(:disabled) {
+  background: var(--color-wind);
+  color: var(--bg-dark);
+}
+
+.bgio-lobby button:disabled {
+  border-color: var(--border-color);
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+
+/* Horizontal alignment for action buttons inside the lobby list */
+.bgio-lobby-room-list td:last-child {
+  display: flex;
+  gap: 10px;
+}
+
+/* Make inputs look consistent */
+.bgio-lobby input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+  padding: 0.5rem;
+  color: var(--text-main);
+  font-family: var(--font-data);
+  margin: 0 5px;
+}
+
+.bgio-lobby input:focus {
+  border-color: var(--color-wind);
+  outline: none;
+}
+
+/* Ensure the game itself is full screen when it replaces the lobby */
+.bgio-client {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: var(--bg-dark);
+}
+
+/* Fix table layout for horizontal room buttons */
+.bgio-lobby-room-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bgio-lobby-room-list th, .bgio-lobby-room-list td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+}
+
+.bgio-lobby-room-list tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Style the "Create Room" section to be horizontal if possible */
+.bgio-lobby-room-list > div {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1rem;
 }
 
 /* Fullscreen game wrapper */
 .game-fullscreen {
   position: fixed;
-  inset: 0;                 /* top/right/bottom/left: 0 */
+  inset: 0;
   width: 100vw;
   height: 100vh;
   background: var(--bg-dark);
   overflow: hidden;
-}
-
-/* Make sure the boardgame.io client div fills its parent */
-.game-fullscreen > div {
-  width: 100%;
-  height: 100%;
+  z-index: 1000;
 }
