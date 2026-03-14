@@ -12,6 +12,7 @@ export interface Bid {
   player_id: string;
   price: number;
   volume: number;
+  is_short?: boolean;
 }
 
 export interface Contract {
@@ -22,6 +23,20 @@ export interface Contract {
   base_price: number;
   bids: Bid[];
   delivery_country: string; // default "GER"
+  delivery_day: number;
+}
+
+export interface Position {
+  player_id: string;
+  contract_id: string;
+  origin_country: string;
+  energy_type: EnergyType;
+  volume: number;
+  bid_price: number;
+  base_price: number;
+  is_short: boolean;
+  day_placed: number;
+  period_placed: DayPeriod;
 }
 
 export interface Conduct {
@@ -58,6 +73,9 @@ export interface WeatherDataPoint {
   wind_speed: number;
   cloud_cover: number;
   precipitation: number;
+  consumption?: number;
+  generation?: Record<string, number>;
+  mix_percentages?: Record<string, number>;
 }
 
 export interface CountryWeatherData {
@@ -98,6 +116,7 @@ export interface GameState {
   phase_deadline: number | null;  // Unix ms timestamp, null when no timer is active
   current_day: number;
   total_days: number;
+  positions: Position[];
 }
 export interface RouteStep {
   originCountryId: string;

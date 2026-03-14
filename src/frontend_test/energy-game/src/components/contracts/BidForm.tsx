@@ -4,21 +4,23 @@ import type { Contract } from '../../game/types';
 interface BidFormProps {
   contract: Contract;
   onClose: () => void;
-  onSubmit: (price: number, volume: number) => void;
+  onSubmit: (price: number, volume: number, isShort: boolean) => void;
 }
 
 export const BidForm: React.FC<BidFormProps> = ({ contract, onClose, onSubmit }) => {
   const [price, setPrice] = useState<number>(contract.base_price);
   const [volume, setVolume] = useState<number>(contract.available_volume);
+  const [isShort, setIsShort] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent, short: boolean) => {
     e.preventDefault();
+    setIsShort(short);
     setShowConfirmation(true);
   };
 
   const confirmSubmit = () => {
-    onSubmit(price, volume);
+    onSubmit(price, volume, isShort);
     onClose();
   };
 
@@ -44,7 +46,7 @@ export const BidForm: React.FC<BidFormProps> = ({ contract, onClose, onSubmit })
         maxWidth: '90%'
       }}>
         {!showConfirmation ? (
-          <form onSubmit={handleSubmit}>
+          <form>
             <h3 className="mono" style={{ color: 'var(--color-wind)', marginBottom: '20px' }}>
               PLACE BID: {contract.origin_country} {contract.energy_type.toUpperCase()}
             </h3>
@@ -116,7 +118,24 @@ export const BidForm: React.FC<BidFormProps> = ({ contract, onClose, onSubmit })
                 CANCEL
               </button>
               <button 
-                type="submit"
+                type="button"
+                onClick={(e) => handleSubmit(e as any, true)}
+                className="mono"
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  background: 'transparent',
+                  border: '1px solid var(--color-solar)',
+                  color: 'var(--color-solar)',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                SHORT
+              </button>
+              <button 
+                type="button"
+                onClick={(e) => handleSubmit(e as any, false)}
                 className="mono"
                 style={{
                   flex: 1,
@@ -134,9 +153,11 @@ export const BidForm: React.FC<BidFormProps> = ({ contract, onClose, onSubmit })
           </form>
         ) : (
           <div style={{ textAlign: 'center' }}>
-            <h3 className="mono" style={{ color: 'var(--color-wind)', marginBottom: '20px' }}>CONFIRM BID</h3>
+            <h3 className="mono" style={{ color: isShort ? 'var(--color-solar)' : 'var(--color-wind)', marginBottom: '20px' }}>
+              CONFIRM {isShort ? 'SHORT' : 'BID'}
+            </h3>
             <p className="mono" style={{ fontSize: '0.9rem', marginBottom: '30px' }}>
-              Are you sure you want to bid €{price}/MWh for {volume} MWh from {contract.origin_country}?
+              Are you sure you want to {isShort ? 'short' : 'bid'} €{price}/MWh for {volume} MWh from {contract.origin_country}?
             </p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button 
@@ -159,7 +180,7 @@ export const BidForm: React.FC<BidFormProps> = ({ contract, onClose, onSubmit })
                 style={{
                   flex: 1,
                   padding: '10px',
-                  background: 'var(--color-wind)',
+                  background: isShort ? 'var(--color-solar)' : 'var(--color-wind)',
                   border: 'none',
                   color: '#000',
                   fontWeight: 'bold',

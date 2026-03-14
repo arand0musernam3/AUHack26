@@ -26,8 +26,9 @@ export const SidePane: React.FC<SidePaneProps> = ({ G, ctx, playerID, moves }) =
             )}
             <ContractList 
               contracts={G.contracts} 
-              onBid={(id, price, vol) => moves.submitBid(id, price, vol)}
+              onBid={(id, price, vol, isShort) => moves.submitBid(id, price, vol, isShort)}
               disabled={ctx.phase !== 'bidding'}
+              currentDay={G.current_day}
             />
           </div>
         );

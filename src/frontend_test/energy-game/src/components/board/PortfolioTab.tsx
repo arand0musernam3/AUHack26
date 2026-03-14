@@ -30,6 +30,9 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
       .map(bid => ({ ...bid, contract }))
   );
 
+  // My current won positions
+  const myPositions = (G.positions || []).filter(pos => pos.player_id === playerID);
+
   // Find bids from other players
   const otherBidsByPlayer: Record<string, any[]> = {};
   Object.values(contracts).forEach(contract => {
@@ -119,13 +122,67 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
       </div>
 
       <div className="pane-header" style={{ background: 'transparent', padding: '0 0 15px 0', borderBottom: '1px solid var(--border-color)', marginBottom: '15px' }}>
-        <span>MY ACTIVE BIDS</span>
+        <span>MY ACTIVE POSITIONS</span>
+        <span className="mono">{myPositions.length} POSITIONS</span>
+      </div>
+
+      {myPositions.length === 0 ? (
+        <div className="placeholder" style={{ padding: '20px 0', textAlign: 'center', opacity: 0.6 }}>
+          No active energy positions.
+        </div>
+      ) : (
+        <div className="position-list" style={{ marginBottom: '25px' }}>
+          {myPositions.map((pos, index) => (
+            <div 
+              key={`my-pos-${pos.contract_id}-${index}`}
+              style={{ 
+                border: '1px solid var(--border-color)', 
+                padding: '12px', 
+                marginBottom: '12px',
+                background: 'rgba(255,255,255,0.02)',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}
+            >
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '2px', height: '100%', background: pos.is_short ? 'var(--color-solar)' : 'var(--color-wind)' }}></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="mono" style={{ color: pos.is_short ? 'var(--color-solar)' : 'var(--color-wind)', fontWeight: 'bold' }}>
+                  {pos.origin_country} {pos.is_short ? '[SHORT]' : '[LONG]'}
+                </span>
+                <span className="mono" style={{ fontSize: '0.7rem', opacity: 0.6 }}>
+                  {pos.energy_type.toUpperCase()}
+                </span>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                  VOLUME<br />
+                  <span className="mono" style={{ color: 'var(--text-main)', fontSize: '0.85rem' }}>
+                    {pos.volume.toFixed(0)} MWh
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                  ENTRY PRICE<br />
+                  <span className="mono" style={{ color: 'var(--text-main)', fontSize: '0.85rem' }}>
+                    €{pos.bid_price}/MWh
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="pane-header" style={{ background: 'transparent', padding: '0 0 15px 0', borderBottom: '1px solid var(--border-color)', marginBottom: '15px' }}>
+        <span>MY PENDING BIDS</span>
         <span className="mono">{myBids.length} BIDS</span>
       </div>
 
       {myBids.length === 0 ? (
         <div className="placeholder" style={{ padding: '20px 0', textAlign: 'center', opacity: 0.6 }}>
-          No active energy bids found.
+          No pending energy bids.
         </div>
       ) : (
         <div className="bid-list">
@@ -145,8 +202,8 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="mono" style={{ color: 'var(--color-wind)', fontWeight: 'bold' }}>
-                  {bid.contract.origin_country} → {bid.contract.delivery_country}
+                <span className="mono" style={{ color: bid.is_short ? 'var(--color-solar)' : 'var(--color-wind)', fontWeight: 'bold' }}>
+                  {bid.contract.origin_country} {bid.is_short ? '(SHORT)' : '(LONG)'}
                 </span>
                 <span className="mono" style={{ fontSize: '0.7rem', opacity: 0.6 }}>
                   {bid.contract.energy_type.toUpperCase()}
@@ -206,6 +263,7 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                   <div style={{ display: 'flex', gap: '15px', opacity: 0.8 }}>
                     <span className="mono" style={{ fontSize: '0.7rem' }}>VOL: {bid.volume}</span>
                     <span className="mono" style={{ fontSize: '0.7rem' }}>PRC: €{bid.price}</span>
+                    {bid.is_short && <span className="mono" style={{ fontSize: '0.7rem', color: 'var(--color-solar)' }}>SHORT</span>}
                   </div>
                 )}
               </div>

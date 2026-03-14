@@ -6,15 +6,10 @@ import type {
   Conduct,
   ActionCardType,
   ActionCardInstance,
-  RouteStep,
   GameState,
-  CountryWeatherData,
-  DayPeriod,
 } from "./types";
 
 import * as weatherReader from "./weatherReader";
-
-type MoveContext = { G: GameState; ctx: Ctx; playerID: string };
 
 const COUNTRIES = [
   "DE", "FR", "ES", "PT", "IT", "NL", "BE", "DK", "NO", "SE", "FI", "PL", "CZ", "AT", "CH",
@@ -23,23 +18,49 @@ const ENERGY_TYPES: EnergyType[] = [
   "Wind", "Solar", "Water", "Fossil", "Nuclear",
 ];
 
-const generateMockContracts = (): Record<string, Contract> => {
+/**
+ * Deterministically generates contracts for a given day range.
+ * Current day gets the most contracts, following days get progressively fewer.
+ */
+const generateDeterministicContracts = (currentDay: number, totalDays: number): Record<string, Contract> => {
   const contracts: Record<string, Contract> = {};
-  let id = 1;
-  COUNTRIES.slice(0, 5).forEach((country) => {
-    ENERGY_TYPES.forEach((type) => {
-      const contractId = `c${id++}`;
-      contracts[contractId] = {
-        contract_id: contractId,
-        origin_country: country,
-        energy_type: type,
-        available_volume: Math.floor(Math.random() * 500) + 100,
-        base_price: Math.floor(Math.random() * 50) + 20,
-        bids: [],
-        delivery_country: "DE",
-      };
-    });
-  });
+  
+  // Deterministic values for volume and base price based on day, country, and type
+  const getVol = (day: number, cIdx: number, tIdx: number) => {
+    const base = 500 - (day - 1) * 50; // Further days have less volume
+    const seed = (day * 100) + (cIdx * 10) + tIdx;
+    return Math.max(100, base + (seed % 200));
+  };
+  
+  const getPrice = (day: number, cIdx: number, tIdx: number) => {
+    const seed = (day * 50) + (cIdx * 5) + tIdx;
+    return 20 + (seed % 30);
+  };
+
+  // Generate contracts for current day and next 2 days
+  for (let d = currentDay; d <= Math.min(currentDay + 2, totalDays); d++) {
+    // Number of countries depends on day: most on day 1
+    const countryCount = Math.max(2, 6 - (d - currentDay) * 2);
+    
+    for (let c = 0; c < countryCount; c++) {
+      const country = COUNTRIES[c % COUNTRIES.length];
+      for (let t = 0; t < ENERGY_TYPES.length; t++) {
+        const type = ENERGY_TYPES[t];
+        const contractId = `d${d}-c${c}-t${t}`;
+        contracts[contractId] = {
+          contract_id: contractId,
+          origin_country: country,
+          energy_type: type,
+          available_volume: getVol(d, c, t),
+          base_price: getPrice(d, c, t),
+          bids: [],
+          delivery_country: "DE",
+          delivery_day: d,
+        };
+      }
+    }
+  }
+  
   return contracts;
 };
 
@@ -95,13 +116,14 @@ export const EnergyGame = {
       pipes = weatherReader.getHistoricalPipes(Object.keys(weather_data));
     }
 
+    const total_days = 5;
     return {
       phase_number: 1,
       current_day: 1,
-      total_days: 5,
+      total_days,
       current_period: 1,
       periods_completed: [],
-      contracts: generateMockContracts(),
+      contracts: generateDeterministicContracts(1, total_days),
       player_balances,
       player_names,
       ready_players: [],
@@ -112,6 +134,7 @@ export const EnergyGame = {
       current_date,
       pipes,
       phase_deadline: null,
+      positions: [],
     };
   },
 
@@ -120,25 +143,75 @@ export const EnergyGame = {
       start: true,
       onBegin: ({ G }) => {
         G.ready_players = [];
-        G.contracts = generateMockContracts();
+        // Refresh contracts, keeping existing ones that have bids
+        const newContracts = generateDeterministicContracts(G.current_day, G.total_days);
+        
+        // Merge: keep old if it has bids or is for the current day
+        const merged: Record<string, Contract> = {};
+        
+        // 1. Keep any old contract that has bids or is NOT in the past
+        Object.keys(G.contracts).forEach(id => {
+          const c = G.contracts[id];
+          if (c.bids.length > 0 || c.delivery_day >= G.current_day) {
+            merged[id] = c;
+          }
+        });
+        
+        // 2. Add new contracts if they don't exist
+        Object.keys(newContracts).forEach(id => {
+          if (!merged[id]) {
+            merged[id] = newContracts[id];
+          }
+        });
+        
+        G.contracts = merged;
       },
       endIf: ({ G, ctx }) => G.ready_players.length >= ctx.numPlayers,
       next: "actionDeployment",
       onEnd: ({ G }) => {
         Object.keys(G.contracts).forEach(id => {
           const contract = G.contracts[id];
-          if (contract.bids.length === 0) return;
+          // Only evaluate contracts for the CURRENT day that have bids
+          if (contract.delivery_day !== G.current_day || contract.bids.length === 0) return;
+          
           const maxPrice = Math.max(...contract.bids.map(b => b.price));
           const winners = contract.bids.filter(b => b.price === maxPrice);
           const volPerWinner = contract.available_volume / winners.length;
+          
           winners.forEach(bid => {
             const cost = maxPrice * volPerWinner;
             if (G.player_balances[bid.player_id] >= cost) {
               G.player_balances[bid.player_id] -= cost;
+              G.positions.push({
+                player_id: bid.player_id,
+                contract_id: contract.contract_id,
+                origin_country: contract.origin_country,
+                energy_type: contract.energy_type,
+                volume: volPerWinner,
+                bid_price: maxPrice,
+                base_price: contract.base_price,
+                is_short: !!bid.is_short,
+                day_placed: G.current_day,
+                period_placed: G.current_period
+              });
             }
           });
+          // Clear bids as they are now positions
           contract.bids = [];
         });
+        
+        // Cleanup: remove any contract for current day (they are processed)
+        // or any past contract with no bids.
+        Object.keys(G.contracts).forEach(id => {
+          const c = G.contracts[id];
+          if (c.delivery_day < G.current_day && c.bids.length === 0) {
+            delete G.contracts[id];
+          }
+          if (c.delivery_day === G.current_day) {
+             delete G.contracts[id];
+          }
+        });
+
         G.ready_players = []; // Extra safety
       }
     },
@@ -164,6 +237,50 @@ export const EnergyGame = {
       endIf: ({ G, ctx }) => G.ready_players.length >= ctx.numPlayers,
       next: "bidding",
       onEnd: ({ G }) => {
+        // Evaluate positions using linear pricing model
+        const K_LOAD = 0.0005; // Load sensitivity
+        const K_GEN = 0.0005;  // Generation sensitivity
+        const K_SCARCITY = 0.001; // Energy type scarcity factor
+
+        G.positions.forEach(pos => {
+          if (pos.day_placed === G.current_day) {
+            const countryWeather = G.weather_data[pos.origin_country];
+            let marketPrice = pos.base_price;
+            
+            if (countryWeather && countryWeather.current.consumption && countryWeather.current.generation) {
+              const load = countryWeather.current.consumption;
+              const generationMix = countryWeather.current.generation;
+              const totalGen = Object.values(generationMix).reduce((a, b) => a + b, 0);
+              
+              const typeGen = generationMix[pos.energy_type] || 0;
+              const typeAvg = totalGen / 5;
+              const typeScarcity = typeAvg - typeGen;
+
+              marketPrice = pos.base_price 
+                + (K_LOAD * load) 
+                - (K_GEN * totalGen) 
+                + (K_SCARCITY * typeScarcity);
+
+              marketPrice = Math.max(5, Math.min(300, marketPrice));
+              console.log(`Evaluating position for player ${pos.player_id} on contract ${pos.contract_id}:`);
+              console.log(`  Load: ${load}, Total Gen: ${totalGen}, Type Gen: ${typeGen}, Type Scarcity: ${typeScarcity}`);
+              console.log(`  Market Price: ${marketPrice.toFixed(2)}, Bid Price: ${pos.bid_price}, Volume: ${pos.volume}`);
+            }
+
+            let profit = 0;
+            if (pos.is_short) {
+              profit = (pos.bid_price - marketPrice) * pos.volume;
+            } else {
+              profit = (marketPrice - pos.bid_price) * pos.volume;
+            }
+            
+            G.player_balances[pos.player_id] += (pos.bid_price * pos.volume) + profit;
+          }
+        });
+        
+        // Remove evaluated positions
+        G.positions = G.positions.filter(pos => pos.day_placed !== G.current_day);
+
         if (G.current_day < G.total_days) {
           G.current_day++;
           G.current_period = 1;
@@ -182,9 +299,17 @@ export const EnergyGame = {
     setPlayerName: ({ G }, id: string, name: string) => {
       G.player_names[id] = name;
     },
-    submitBid: ({ G, playerID }, tradeId: string, price: number, volume: number) => {
+    submitBid: ({ G, playerID }, tradeId: string, price: number, volume: number, is_short: boolean = false) => {
       if (!G.contracts[tradeId]) return INVALID_MOVE;
-      G.contracts[tradeId].bids.push({ player_id: playerID, price, volume });
+      const maxCost = G.contracts[tradeId].base_price * volume;
+      if (G.player_balances[playerID] < maxCost) return INVALID_MOVE;
+      G.contracts[tradeId].bids.push({ player_id: playerID, price, volume, is_short });
+    },
+    shortBid: ({ G, playerID }, tradeId: string, price: number, volume: number) => {
+      if (!G.contracts[tradeId]) return INVALID_MOVE;
+      const maxCost = G.contracts[tradeId].base_price * volume;
+      if (G.player_balances[playerID] < maxCost) return INVALID_MOVE;
+      G.contracts[tradeId].bids.push({ player_id: playerID, price, volume, is_short: true });
     },
     playActionCard: ({ G, playerID }, cardId: string, targetCountryId?: string, faceDown?: boolean) => {
       const playerCards = G.action_cards[playerID] || [];
