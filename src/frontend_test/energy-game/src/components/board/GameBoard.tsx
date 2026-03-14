@@ -14,7 +14,7 @@ export interface BoardProps {
     routeEnergy: (contractId: string, route: any[]) => void;
     buyActionCard: () => void;
     markReady: () => void;
-    setPlayerName: (name: string) => void;
+    setPlayerName: (id: string, name: string) => void;
   };
   playerID: string;
   isActive: boolean;
@@ -22,19 +22,16 @@ export interface BoardProps {
 }
 
 export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => {
-  // Sync name from Lobby metadata
+  // Sync LOCAL player name from Lobby metadata
   useEffect(() => {
-    if (!ctx.playerMetadata) return;
+    if (!ctx.playerMetadata || !playerID) return;
 
-    // Check all players, not just local, to help sync the whole state
-    Object.keys(ctx.playerMetadata).forEach(id => {
-      const name = ctx.playerMetadata[id]?.name;
-      if (name && name.trim() !== "" && G.player_names[id] !== name) {
-        console.log(`[GameBoard] Syncing name for ${id}: ${name}`);
-        moves.setPlayerName(name);
-      }
-    });
-  }, [ctx.playerMetadata, G.player_names, moves]);
+    const myName = ctx.playerMetadata[playerID]?.name;
+    if (myName && myName.trim() !== "" && G.player_names[playerID] !== myName) {
+      console.log(`[GameBoard] Syncing local name for ${playerID}: ${myName}`);
+      moves.setPlayerName(playerID, myName);
+    }
+  }, [ctx.playerMetadata, G.player_names, playerID, moves]);
 
   // Guard against undefined G
   if (!G) {

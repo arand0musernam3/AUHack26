@@ -64,19 +64,6 @@ const advanceDate = (dateStr: string): string => {
   return date.toISOString().slice(0, 16);
 };
 
-const phaseConfig = (nextPhase?: string | ((...args: any[]) => string)) => ({
-  ...(nextPhase ? { next: nextPhase } : {}),
-  onBegin: ({ G }: { G: GameState }) => {
-    G.ready_players = [];
-  },
-  endIf: ({ G, ctx }: { G: GameState; ctx: Ctx }) => {
-    return G.ready_players.length >= ctx.numPlayers;
-  },
-  turn: {
-    activePlayers: { all: "stage" },
-  },
-});
-
 export const EnergyGame = {
   name: "energy-market",
   maxPlayers: 5,
@@ -129,23 +116,20 @@ export const EnergyGame = {
 
   phases: {
     bidding: {
-      ...phaseConfig(),
       start: true,
-      next: "actionDeployment",
-      onBegin: ({ G }: { G: GameState }) => {
-        G.ready_players = []; // Explicitly clear
+      onBegin: ({ G }) => {
+        G.ready_players = [];
         G.contracts = generateMockContracts();
       },
-      onEnd: ({ G }: { G: GameState }) => {
-        // Resolve Auctions
+      endIf: ({ G, ctx }) => G.ready_players.length >= ctx.numPlayers,
+      next: "actionDeployment",
+      onEnd: ({ G }) => {
         Object.keys(G.contracts).forEach(id => {
           const contract = G.contracts[id];
           if (contract.bids.length === 0) return;
-
           const maxPrice = Math.max(...contract.bids.map(b => b.price));
           const winners = contract.bids.filter(b => b.price === maxPrice);
           const volPerWinner = contract.available_volume / winners.length;
-
           winners.forEach(bid => {
             const cost = maxPrice * volPerWinner;
             if (G.player_balances[bid.player_id] >= cost) {
@@ -154,28 +138,31 @@ export const EnergyGame = {
           });
           contract.bids = [];
         });
+        G.ready_players = []; // Extra safety
       }
     },
 
     actionDeployment: {
-      ...phaseConfig(),
-      next: ({ G }: { G: GameState }) => (G.current_period < 3 ? "bidding" : "resolution"),
-      onBegin: ({ G }: { G: GameState }) => {
-        G.ready_players = []; // Explicitly clear
+      onBegin: ({ G }) => {
+        G.ready_players = [];
       },
-      onEnd: ({ G }: { G: GameState }) => {
+      endIf: ({ G, ctx }) => G.ready_players.length >= ctx.numPlayers,
+      next: ({ G }) => (G.current_period < 3 ? "bidding" : "resolution"),
+      onEnd: ({ G }) => {
         if (G.current_period < 3) {
           G.current_period++;
         }
+        G.ready_players = []; // Extra safety
       },
     },
 
     resolution: {
-      ...phaseConfig("bidding"),
-      onBegin: ({ G }: { G: GameState }) => {
-        G.ready_players = []; // Explicitly clear
+      onBegin: ({ G }) => {
+        G.ready_players = [];
       },
-      onEnd: ({ G }: { G: GameState }) => {
+      endIf: ({ G, ctx }) => G.ready_players.length >= ctx.numPlayers,
+      next: "bidding",
+      onEnd: ({ G }) => {
         if (G.current_day < G.total_days) {
           G.current_day++;
           G.current_period = 1;
@@ -185,19 +172,20 @@ export const EnergyGame = {
           }
         }
         G.phase_number++;
+        G.ready_players = []; // Extra safety
       },
     },
   },
 
   moves: {
-    setPlayerName: ({ G, playerID }: MoveContext, name: string) => {
-      G.player_names[playerID] = name;
+    setPlayerName: ({ G }, id: string, name: string) => {
+      G.player_names[id] = name;
     },
-    submitBid: ({ G, playerID }: MoveContext, tradeId: string, price: number, volume: number) => {
+    submitBid: ({ G, playerID }, tradeId: string, price: number, volume: number) => {
       if (!G.contracts[tradeId]) return INVALID_MOVE;
       G.contracts[tradeId].bids.push({ player_id: playerID, price, volume });
     },
-    playActionCard: ({ G, playerID }: MoveContext, cardId: string, targetCountryId?: string, faceDown?: boolean) => {
+    playActionCard: ({ G, playerID }, cardId: string, targetCountryId?: string, faceDown?: boolean) => {
       const playerCards = G.action_cards[playerID] || [];
       const cardIndex = playerCards.findIndex((c) => c.card_id === cardId);
       if (cardIndex === -1) return INVALID_MOVE;
@@ -209,7 +197,7 @@ export const EnergyGame = {
         rounds_remaining: 3,
       });
     },
-    buyActionCard: ({ G, playerID }: MoveContext) => {
+    buyActionCard: ({ G, playerID }) => {
       const COST = 5000;
       if (G.player_balances[playerID] < COST) return INVALID_MOVE;
       G.player_balances[playerID] -= COST;
@@ -219,7 +207,7 @@ export const EnergyGame = {
         face_down: false,
       });
     },
-    markReady: ({ G, playerID }: MoveContext) => {
+    markReady: ({ G, playerID }) => {
       if (!G.ready_players.includes(playerID)) {
         G.ready_players.push(playerID);
       }
@@ -227,6 +215,9 @@ export const EnergyGame = {
   },
 
   turn: {
-    activePlayers: { all: "stage" },
+    activePlayers: { all: "main" },
+    stages: {
+      main: {}
+    }
   },
 };
