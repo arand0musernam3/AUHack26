@@ -70,15 +70,28 @@ class Conduct(BaseModel):
     is_broken: bool = False
 
 
+class RouteBid(BaseModel):
+    player_id: str = ""
+    origin: str
+    dest: str
+    volume: float
+    toll_bid: float
+
+
 class GameState(BaseModel):
     current_round: int = 1
     phase: int = 3
     current_timestamp: str = ""
     contracts: Dict[str, Contract] = {}
+    unsold_contracts: Dict[str, Contract] = {}  # Holds the decaying pool
     player_balances: Dict[str, float] = {}
     player_portfolios: Dict[str, List[Contract]] = defaultdict(list)
-    ready_players: set = set()
     conducts: List[Conduct] = []
+
+    # State tracking for the two interactive phases
+    ready_players: set = set()
+    routing_bids: List[RouteBid] = []
+    routing_ready_players: set = set()
 
 
 # ==========================================
@@ -106,10 +119,8 @@ class EnergyDataEngine:
         gen_path = os.path.join(self.base_dir, "generation", "*-generation.csv")
         for f in glob.glob(gen_path):
             self.active_countries.append(os.path.basename(f).replace("-generation.csv", ""))
-        print(f"Discovered {len(self.active_countries)} countries: {self.active_countries}")
 
     def load_all_data(self):
-        print("Loading data from all countries...")
         for country in self.active_countries:
             weather_prefix = 'DK' if country == 'DK1' else country
             w_files = glob.glob(os.path.join(self.base_dir, 'weather', f'{weather_prefix}-open-meteo-*.csv'))
@@ -135,11 +146,9 @@ class EnergyDataEngine:
                 self.country_data[country] = df
             except Exception:
                 pass
-            print("Country: ", country, df)
 
     def load_conduct_graph(self) -> List[Conduct]:
         conducts, max_flows = [], {}
-        print("Generating Conduct Graph from flow data...")
         for file in glob.glob(os.path.join(self.base_dir, "flows", "*-physical-flows-in.csv")):
             try:
                 df = pd.read_csv(file, usecols=['zone', 'value (MW)']).dropna()
@@ -158,7 +167,6 @@ class EnergyDataEngine:
                 origin=origin, destination=dest,
                 base_cost=max(1.0, round(5.0 - (cap / 100.0), 2)), volume_capacity=round(cap, 1)
             ))
-        print(f"Generated {len(conducts)} interconnecting conducts.")
         return conducts
 
     def pick_random_start_time(self):
@@ -168,9 +176,7 @@ class EnergyDataEngine:
         return self.current_time
 
     def advance_time(self, days=1):
-        """Advances the historical dataset forward by X days to simulate progressing game rounds."""
-        if self.current_time:
-            self.current_time += pd.Timedelta(days=days)
+        if self.current_time: self.current_time += pd.Timedelta(days=days)
 
     def generate_contracts_for_round(self, current_round: int) -> Dict[str, Contract]:
         contracts = {}
@@ -199,12 +205,8 @@ class EnergyDataEngine:
                 price_per_mw = round(base_price + random.uniform(-5.0, 5.0), 2)
 
                 contracts[c_id] = Contract(
-                    contract_id=c_id,
-                    contract_type=c_type,
-                    target_country=country,
-                    energy_type=e_type,
-                    volume=volume,
-                    base_price_per_mw=price_per_mw,
+                    contract_id=c_id, contract_type=c_type, target_country=country,
+                    energy_type=e_type, volume=volume, base_price_per_mw=price_per_mw,
                     total_base_price=round(volume * price_per_mw, 2),
                     execution_round=current_round + random.randint(1, 3)
                 )
@@ -212,7 +214,7 @@ class EnergyDataEngine:
 
 
 # ==========================================
-# 3. ROUTING & SETTLEMENT ENGINE
+# 3. ROUTING ENGINE
 # ==========================================
 class RoutingEngine:
     def __init__(self, conducts: List[Conduct]):
@@ -264,45 +266,9 @@ class RoutingEngine:
 
         return remaining, total_routing_cost
 
-
-def settle_maturing_contracts(state: GameState):
-    """Phase 5: Execute contracts maturing this round and apply Central Market penalties."""
-    router = RoutingEngine(state.conducts)
-
-    for player_id, portfolio in state.player_portfolios.items():
-        maturing_contracts = [c for c in portfolio if c.execution_round <= state.current_round]
-        if not maturing_contracts: continue
-
-        state.player_portfolios[player_id] = [c for c in portfolio if c.execution_round > state.current_round]
-
-        buys = [c for c in maturing_contracts if c.contract_type == ContractType.BUY_FROM]
-        sells = [c for c in maturing_contracts if c.contract_type == ContractType.SELL_TO]
-
-        for sell_contract in sells:
-            owed = sell_contract.volume
-            for buy_contract in buys:
-                if owed <= 0 or buy_contract.volume <= 0: continue
-
-                transfer_vol = min(owed, buy_contract.volume)
-                shortfall, routing_cost = router.route_energy(buy_contract.target_country, sell_contract.target_country,
-                                                              transfer_vol)
-
-                successfully_routed = transfer_vol - shortfall
-                owed -= successfully_routed
-                buy_contract.volume -= successfully_routed
-                state.player_balances[player_id] -= routing_cost
-
-            if owed > 0:
-                emergency_price = owed * (sell_contract.base_price_per_mw * 5.0)
-                state.player_balances[player_id] -= emergency_price
-
-        for buy_contract in buys:
-            if buy_contract.volume > 0:
-                dump_revenue = buy_contract.volume * (buy_contract.base_price_per_mw * 0.10)
-                state.player_balances[player_id] += dump_revenue
+    # ==========================================
 
 
-# ==========================================
 # 4. INITIALIZATION & WEBSOCKET SETUP
 # ==========================================
 data_engine = EnergyDataEngine(base_dir="../../dataset")
@@ -330,7 +296,6 @@ class ConnectionManager:
         if p_id in self.active_connections: del self.active_connections[p_id]
 
     async def broadcast_state(self):
-        # Update timestamp string right before sending
         MATCH_STATE.current_timestamp = str(data_engine.current_time) if data_engine.current_time else ""
         msg = json.dumps({"type": "STATE_UPDATE", "data": jsonable_encoder(MATCH_STATE)})
         for conn in list(self.active_connections.values()):
@@ -360,8 +325,9 @@ async def websocket_endpoint(websocket: WebSocket, player_id: str):
                 continue
 
             async with state_lock:
-                if payload.get("action") == "SUBMIT_BIDS" and MATCH_STATE.phase == 3:
 
+                # --- ACTION 1: AUCTION BIDDING ---
+                if payload.get("action") == "SUBMIT_BIDS" and MATCH_STATE.phase == 3:
                     bids = payload.get("bids", [])
                     if len(bids) > 5:
                         await websocket.send_text(json.dumps({"error": "Maximum 5 bids allowed."}))
@@ -369,7 +335,7 @@ async def websocket_endpoint(websocket: WebSocket, player_id: str):
 
                     total_exposure = sum(b["total_bid_price"] for b in bids)
                     if total_exposure > MATCH_STATE.player_balances[player_id]:
-                        await websocket.send_text(json.dumps({"error": "Insufficient capital for these bids."}))
+                        await websocket.send_text(json.dumps({"error": "Insufficient capital."}))
                         continue
 
                     for bid_data in bids:
@@ -383,26 +349,19 @@ async def websocket_endpoint(websocket: WebSocket, player_id: str):
                     if len(MATCH_STATE.ready_players) >= len(manager.active_connections) and len(
                             manager.active_connections) > 0:
 
-                        unsold_pool = {}
+                        MATCH_STATE.unsold_contracts = {}
 
-                        # Phase 4: Auction Resolution
+                        # Phase 4: Resolve Auctions
                         for cid, contract in MATCH_STATE.contracts.items():
                             if not contract.bids:
-                                # TIME DECAY LOGIC
-                                # If it executes next round, it expires from the bidding pool (too late to buy/sell)
-                                if contract.execution_round <= MATCH_STATE.current_round + 1:
-                                    continue
-
-                                    # MARGIN COMPRESSION
+                                if contract.execution_round <= MATCH_STATE.current_round + 1: continue
+                                # Decay logic
                                 if contract.contract_type == ContractType.BUY_FROM:
-                                    # It becomes 5% more expensive to acquire
                                     contract.base_price_per_mw = round(contract.base_price_per_mw * 1.05, 2)
                                 else:
-                                    # You get paid 5% less to deliver it
                                     contract.base_price_per_mw = round(contract.base_price_per_mw * 0.95, 2)
-
                                 contract.total_base_price = round(contract.volume * contract.base_price_per_mw, 2)
-                                unsold_pool[cid] = contract
+                                MATCH_STATE.unsold_contracts[cid] = contract
                                 continue
 
                             sorted_bids = sorted(contract.bids, key=lambda x: x.total_bid_price, reverse=True)
@@ -422,17 +381,78 @@ async def websocket_endpoint(websocket: WebSocket, player_id: str):
                                 won_contract = contract.model_copy(update={"bids": []})
                                 MATCH_STATE.player_portfolios[winner.player_id].append(won_contract)
 
-                        # Phase 5: Physical Settlement & Penalties
-                        settle_maturing_contracts(MATCH_STATE)
-
-                        # Prepare for next round
-                        MATCH_STATE.current_round += 1
-                        data_engine.advance_time(days=1)  # Move the historical dataset forward 1 day
-
-                        # Merge the decaying unsold contracts with the brand new ones
-                        new_contracts = data_engine.generate_contracts_for_round(MATCH_STATE.current_round)
-                        MATCH_STATE.contracts = {**unsold_pool, **new_contracts}
+                        # Shift to Logistics Map Phase
+                        MATCH_STATE.phase = 5
                         MATCH_STATE.ready_players.clear()
+
+                # --- ACTION 2: ROUTING & SETTLEMENT ---
+                elif payload.get("action") == "SUBMIT_ROUTES" and MATCH_STATE.phase == 5:
+                    routes = payload.get("routes", [])
+                    for r in routes:
+                        MATCH_STATE.routing_bids.append(RouteBid(
+                            player_id=player_id, origin=r["origin"], dest=r["dest"],
+                            volume=r["volume"], toll_bid=max(1.0, r["toll_bid"])  # Prevent exploiting multipliers < 1
+                        ))
+                    MATCH_STATE.routing_ready_players.add(player_id)
+
+                    if len(MATCH_STATE.routing_ready_players) >= len(manager.active_connections) and len(
+                            manager.active_connections) > 0:
+
+                        # 1. Base Net Positions
+                        net_positions = defaultdict(lambda: defaultdict(float))
+                        price_tracker = defaultdict(lambda: defaultdict(list))
+
+                        for p_id, portfolio in MATCH_STATE.player_portfolios.items():
+                            for c in [c for c in portfolio if c.execution_round <= MATCH_STATE.current_round]:
+                                price_tracker[p_id][c.target_country].append(c.base_price_per_mw)
+                                if c.contract_type == ContractType.BUY_FROM:
+                                    net_positions[p_id][c.target_country] += c.volume
+                                else:
+                                    net_positions[p_id][c.target_country] -= c.volume
+
+                        # 2. Priority Routing Battle
+                        router = RoutingEngine(MATCH_STATE.conducts)
+                        # Sort all players' routes by highest toll bid to claim bottlenecks first
+                        MATCH_STATE.routing_bids.sort(key=lambda x: x.toll_bid, reverse=True)
+
+                        for route in MATCH_STATE.routing_bids:
+                            available_surplus = net_positions[route.player_id][route.origin]
+                            if available_surplus <= 0: continue  # Cannot route energy they do not have
+
+                            vol_to_route = min(route.volume, available_surplus)
+                            shortfall, base_routing_cost = router.route_energy(route.origin, route.dest, vol_to_route)
+                            routed_vol = vol_to_route - shortfall
+
+                            if routed_vol > 0:
+                                # Apply the move to their Net Positions
+                                net_positions[route.player_id][route.origin] -= routed_vol
+                                net_positions[route.player_id][route.dest] += routed_vol
+                                # Charge the toll bid multiplier
+                                MATCH_STATE.player_balances[route.player_id] -= (base_routing_cost * route.toll_bid)
+
+                        # 3. Settlement Penalties & Dumps
+                        for p_id, positions in net_positions.items():
+                            for country, mw in positions.items():
+                                avg_p = sum(price_tracker[p_id][country]) / len(price_tracker[p_id][country]) if \
+                                price_tracker[p_id][country] else 50.0
+                                if mw < 0:  # Deficit
+                                    MATCH_STATE.player_balances[p_id] -= abs(mw) * (avg_p * 5.0)
+                                elif mw > 0:  # Surplus
+                                    MATCH_STATE.player_balances[p_id] += mw * (avg_p * 0.10)
+
+                        # 4. Clean up and Next Round
+                        for p_id in MATCH_STATE.player_portfolios:
+                            MATCH_STATE.player_portfolios[p_id] = [c for c in MATCH_STATE.player_portfolios[p_id] if
+                                                                   c.execution_round > MATCH_STATE.current_round]
+
+                        MATCH_STATE.current_round += 1
+                        MATCH_STATE.phase = 3
+                        MATCH_STATE.routing_bids.clear()
+                        MATCH_STATE.routing_ready_players.clear()
+
+                        data_engine.advance_time(days=1)
+                        new_contracts = data_engine.generate_contracts_for_round(MATCH_STATE.current_round)
+                        MATCH_STATE.contracts = {**MATCH_STATE.unsold_contracts, **new_contracts}
 
                 await manager.broadcast_state()
 
