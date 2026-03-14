@@ -50,12 +50,31 @@ export type WeatherFeature =
   | 'cloud_cover (%)'
   | 'precipitation (mm)';
 
+export interface WeatherDataPoint {
+  time: string;
+  temperature: number;
+  wind_speed: number;
+  cloud_cover: number;
+  precipitation: number;
+}
+
+export interface CountryWeatherData {
+  current: WeatherDataPoint;
+  forecast: WeatherDataPoint[]; // next 3 days
+}
+
 export interface ForecastCard {
   description: string;         // e.g., "Cold front likely in Scandinavia"
   affected_country: string;
   probability: number;         // 0–1
   weather_feature: WeatherFeature;
   direction: 'increase' | 'decrease';
+}
+
+export interface Pipe {
+  from: string;
+  to: string;
+  capacity: number;
 }
 
 export interface GameState {
@@ -68,6 +87,9 @@ export interface GameState {
   forecast?: ForecastCard;
   action_cards: Record<string, ActionCardInstance[]>; // keyed by player_id
   played_cards: PlayedCard[];
+  weather_data: Record<string, CountryWeatherData>;
+  current_date: string;
+  pipes: Pipe[];
 }
 
 export interface RouteStep {

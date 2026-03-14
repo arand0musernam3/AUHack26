@@ -38,7 +38,11 @@ export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => 
       />
 
       <main className="game-layout">
-        <MapPane />
+        <MapPane 
+          weather_data={G.weather_data || {}} 
+          current_date={G.current_date} 
+          pipes={G.pipes || []} 
+        />
         <SidePane G={G} ctx={ctx} playerID={playerID} moves={moves} />
       </main>
     </div>
