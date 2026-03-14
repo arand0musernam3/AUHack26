@@ -271,8 +271,9 @@ export const EnergyGame = {
           // Only evaluate contracts for the CURRENT day that have bids
           if (contract.delivery_day !== G.current_day || contract.bids.length === 0) return;
           
-          const maxPrice = Math.max(...contract.bids.map(b => b.price));
-          const winners = contract.bids.filter(b => b.price === maxPrice);
+          // consider negative bids if they are shorting
+          const maxPrice = Math.max(...contract.bids.map(b => Math.abs(b.price)));
+          const winners = contract.bids.filter(b => Math.abs(b.price) === maxPrice);
           const volPerWinner = contract.available_volume / winners.length;
           
           winners.forEach(bid => {
