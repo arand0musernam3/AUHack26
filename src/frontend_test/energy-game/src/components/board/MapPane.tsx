@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { EuropeMap } from '../map/EuropeMap';
-import type { CountryWeatherData, ActiveModifier, PlayedCard, Pipe } from '../../game/types';
+import type { CountryWeatherData, ActiveModifier, PlayedCard, Pipe, ActivePipeModifier } from '../../game/types';
 
 interface MapPaneProps {
   weather_data: CountryWeatherData;
   current_date: string;
   pipes: Pipe[];
   onCountryClick?: (id: string) => void;
+  onPipeClick?: (id: string) => void;
   activeModifiers?: Record<string, ActiveModifier[]>;
+  activePipeModifiers?: ActivePipeModifier[];
   pendingPlays?: PlayedCard[];
   isTargeting?: boolean;
+  targetingType?: 'country' | 'pipe';
 }
 
 const getCountryId = (name: string): string => {
@@ -27,9 +30,12 @@ export const MapPane: React.FC<MapPaneProps> = ({
   current_date, 
   pipes,
   onCountryClick,
+  onPipeClick,
   activeModifiers = {},
+  activePipeModifiers = [],
   pendingPlays = [],
-  isTargeting = false
+  isTargeting = false,
+  targetingType = 'country'
 }) => {
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
   const [hoveredPipe, setHoveredPipe] = useState<Pipe | null>(null);
@@ -43,7 +49,6 @@ export const MapPane: React.FC<MapPaneProps> = ({
     const active = activeModifiers[countryId] || [];
     const pending = pendingPlays.filter(p => p.target_country === countryId);
 
-    // Calculate probabilities for pending cards
     const cardCounts: Record<string, number> = {};
     pending.forEach(p => {
       cardCounts[p.card.type] = (cardCounts[p.card.type] || 0) + 1;
@@ -130,11 +135,15 @@ export const MapPane: React.FC<MapPaneProps> = ({
   const formatPipeTooltip = (pipe: Pipe) => {
     const hourlyCapacity = Math.round(pipe.capacity);
     const transitCapacity = hourlyCapacity * 12;
+    
+    const activeBroken = activePipeModifiers.find(m => m.type === 'CUT_CONDUCT' && m.target.from === pipe.from && m.target.to === pipe.to);
+    const activeDiscount = activePipeModifiers.find(m => m.type === 'DISCOUNT_CONDUCT' && m.target.from === pipe.from && m.target.to === pipe.to);
+    const pending = pendingPlays.filter(p => p.target_pipe?.from === pipe.from && p.target_pipe?.to === pipe.to);
 
     return (
-      <div className="country-tooltip mono" style={{ border: '1px solid var(--color-solar)', width: '220px' }}>
-        <div className="tooltip-header" style={{ color: 'var(--color-solar)', borderBottom: '1px solid var(--color-solar)' }}>
-          PIPE TERMINAL
+      <div className="country-tooltip mono" style={{ border: activeBroken ? '1px solid var(--color-fossil)' : '1px solid var(--color-solar)', width: '240px' }}>
+        <div className="tooltip-header" style={{ color: activeBroken ? 'var(--color-fossil)' : 'var(--color-solar)', borderBottom: activeBroken ? '1px solid var(--color-fossil)' : '1px solid var(--color-solar)' }}>
+          PIPE TERMINAL {activeBroken ? '[OFFLINE]' : '[ONLINE]'}
         </div>
         <div style={{ fontSize: '0.75rem', marginBottom: '8px' }}>
           {pipe.from} ⇹ {pipe.to}
@@ -147,6 +156,23 @@ export const MapPane: React.FC<MapPaneProps> = ({
             TRANSIT CAP (12h): {transitCapacity.toLocaleString()} MW
           </div>
         </div>
+
+        {activeBroken && (
+          <div style={{ color: 'var(--color-fossil)', fontSize: '0.65rem', marginTop: '10px', fontWeight: 'bold' }}>
+            STATUS: SEVERED ({activeBroken.remaining_rounds} ROUNDS)
+          </div>
+        )}
+        {activeDiscount && (
+          <div style={{ color: 'var(--color-nuclear)', fontSize: '0.65rem', marginTop: '10px', fontWeight: 'bold' }}>
+            STATUS: DISCOUNTED ({activeDiscount.remaining_rounds} ROUNDS)
+          </div>
+        )}
+        
+        {pending.length > 0 && (
+          <div className="tooltip-pending" style={{ marginTop: '10px', color: 'var(--color-solar)', fontSize: '0.65rem' }}>
+            PENDING: {pending.map(p => p.card.type).join(', ')}
+          </div>
+        )}
       </div>
     );
   };
@@ -155,7 +181,7 @@ export const MapPane: React.FC<MapPaneProps> = ({
     <section className="map-pane">
       <div className="map-header pane-header">
         <span className="mono">EUROPEAN GRID STATUS — {current_date.slice(0,10)}</span>
-        {isTargeting && <span className="targeting-pulse mono">SELECT TARGET COUNTRY</span>}
+        {isTargeting && <span className="targeting-pulse mono">SELECT {targetingType.toUpperCase()}</span>}
       </div>
       
       <div className="map-container" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
@@ -165,9 +191,12 @@ export const MapPane: React.FC<MapPaneProps> = ({
           onCountryClick={onCountryClick}
           onCountryHover={setHoveredCountry}
           onPipeHover={setHoveredPipe}
+          onPipeClick={onPipeClick}
           activeModifiers={activeModifiers}
+          activePipeModifiers={activePipeModifiers}
           pendingPlays={pendingPlays}
           isTargeting={isTargeting}
+          targetingType={targetingType}
         />
         
         {hoveredCountry && (
@@ -181,6 +210,24 @@ export const MapPane: React.FC<MapPaneProps> = ({
             {formatPipeTooltip(hoveredPipe)}
           </div>
         )}
+
+        {/* Color Legend in bottom right */}
+        <div className="map-legend mono">
+          <div className="legend-section">
+            <div className="legend-title">COUNTRIES</div>
+            <div className="legend-item"><span className="dot" style={{ background: 'rgba(0, 229, 255, 0.7)' }}></span> Polar Vortex</div>
+            <div className="legend-item"><span className="dot" style={{ background: 'rgba(255, 179, 0, 0.7)' }}></span> Heat Dome</div>
+            <div className="legend-item"><span className="dot" style={{ background: 'rgba(41, 121, 255, 0.7)' }}></span> Monsoon</div>
+            <div className="legend-item"><span className="dot" style={{ background: 'rgba(255, 87, 34, 0.7)' }}></span> Dead Calm / Nerf</div>
+            <div className="legend-item"><span className="dot" style={{ background: 'rgba(118, 255, 3, 0.4)' }}></span> Price Boost</div>
+          </div>
+          <div className="legend-section">
+            <div className="legend-title">CONDUCTS</div>
+            <div className="legend-item"><span className="line" style={{ background: 'var(--color-fossil)' }}></span> Severed (Offline)</div>
+            <div className="legend-item"><span className="line" style={{ background: 'var(--color-nuclear)' }}></span> Discounted (Subsidy)</div>
+            <div className="legend-item"><span className="line" style={{ background: 'var(--color-solar)' }}></span> Pending Target</div>
+          </div>
+        </div>
       </div>
     </section>
   );

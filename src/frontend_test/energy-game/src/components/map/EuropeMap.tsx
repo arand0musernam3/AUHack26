@@ -5,7 +5,7 @@ import {
   Geography,
   Line
 } from "react-simple-maps";
-import type { ActiveModifier, PlayedCard, Pipe, CountryWeatherData } from "../../game/types";
+import type { ActiveModifier, PlayedCard, Pipe, CountryWeatherData, ActivePipeModifier } from "../../game/types";
 import worldData from "../../../countries-50m.json";
 
 interface EuropeMapProps {
@@ -14,9 +14,12 @@ interface EuropeMapProps {
   onCountryClick?: (id: string) => void;
   onCountryHover?: (id: string | null) => void;
   onPipeHover?: (pipe: Pipe | null) => void;
+  onPipeClick?: (id: string) => void;
   activeModifiers?: Record<string, ActiveModifier[]>;
+  activePipeModifiers?: ActivePipeModifier[];
   pendingPlays?: PlayedCard[];
   isTargeting?: boolean;
+  targetingType?: 'country' | 'pipe';
 }
 
 const countryCenters: Record<string, [number, number]> = {
@@ -54,9 +57,12 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
   onCountryClick, 
   onCountryHover,
   onPipeHover,
+  onPipeClick,
   activeModifiers = {},
+  activePipeModifiers = [],
   pendingPlays = [],
-  isTargeting = false
+  isTargeting = false,
+  targetingType = 'country'
 }) => {
   const activeCountries = Object.keys(weather_data);
 
@@ -71,6 +77,8 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
     if (active.some(a => a.type === 'HEAT_DOME')) return 'rgba(255, 179, 0, 0.7)';
     if (active.some(a => a.type === 'MONSOON')) return 'rgba(41, 121, 255, 0.7)';
     if (active.some(a => a.type === 'DEAD_CALM')) return 'rgba(255, 87, 34, 0.7)';
+    if (active.some(a => a.type === 'BOOST_ENERGY')) return 'rgba(118, 255, 3, 0.4)';
+    if (active.some(a => a.type === 'NERF_ENERGY')) return 'rgba(255, 87, 34, 0.4)';
 
     if (pending.length > 0) return 'rgba(255, 255, 255, 0.4)';
     
@@ -106,7 +114,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
                   }}
                   onMouseLeave={() => onCountryHover?.(null)}
                   onClick={() => {
-                    if (isActive) onCountryClick?.(id);
+                    if (isActive && targetingType === 'country') onCountryClick?.(id);
                   }}
                   style={{
                     default: {
@@ -117,7 +125,7 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
                       transition: "all 250ms",
                     },
                     hover: {
-                      fill: isActive ? (isTargeting ? "rgba(255, 179, 0, 0.6)" : "rgba(0, 113, 125, 0.8)") : fill,
+                      fill: isActive ? (isTargeting && targetingType === 'country' ? "rgba(255, 179, 0, 0.6)" : "rgba(0, 113, 125, 0.8)") : fill,
                       stroke: isActive ? "#fff" : "#1e2a38",
                       strokeWidth: isActive ? 1 : 0.5,
                       outline: "none",
@@ -135,19 +143,40 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
           const end = countryCenters[pipe.to];
           if (!start || !end) return null;
 
+          const isPending = pendingPlays.some(p => p.target_pipe?.from === pipe.from && p.target_pipe?.to === pipe.to);
+          
+          const activeBroken = activePipeModifiers.find(m => m.type === 'CUT_CONDUCT' && m.target.from === pipe.from && m.target.to === pipe.to);
+          const activeDiscount = activePipeModifiers.find(m => m.type === 'DISCOUNT_CONDUCT' && m.target.from === pipe.from && m.target.to === pipe.to);
+
+          let strokeColor = "rgba(0, 229, 255, 0.3)";
+          if (activeBroken) strokeColor = "var(--color-fossil)"; // RED
+          if (activeDiscount) strokeColor = "var(--color-nuclear)"; // GREEN
+          if (isPending) strokeColor = "var(--color-solar)"; // YELLOW/ORANGE glow
+
           return (
             <Line
               key={`pipe-${i}`}
               from={start}
               to={end}
-              stroke="rgba(0, 229, 255, 0.2)"
-              strokeWidth={2}
+              stroke={strokeColor}
+              strokeWidth={isPending ? 6 : 4} // Thicker pipes
               strokeLinecap="round"
               onMouseEnter={() => onPipeHover?.(pipe)}
               onMouseLeave={() => onPipeHover?.(null)}
+              onClick={() => {
+                if (targetingType === 'pipe') onPipeClick?.(`${pipe.from} ⇹ ${pipe.to}`);
+              }}
               style={{
-                default: { stroke: "rgba(0, 229, 255, 0.2)", strokeWidth: 2, transition: "all 250ms" },
-                hover: { stroke: "var(--color-solar)", strokeWidth: 4, cursor: "help" }
+                default: { 
+                  stroke: strokeColor, 
+                  strokeWidth: isPending ? 6 : 4, 
+                  transition: "all 250ms" 
+                },
+                hover: { 
+                  stroke: isTargeting && targetingType === 'pipe' ? "var(--color-solar)" : "var(--color-wind)", 
+                  strokeWidth: 8, 
+                  cursor: "pointer" 
+                }
               }}
             />
           );

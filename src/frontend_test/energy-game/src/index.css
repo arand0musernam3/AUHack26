@@ -298,6 +298,49 @@ body {
   font-family: var(--font-data);
 }
 
+/* Map Legend */
+.map-legend {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(10, 12, 15, 0.9);
+  border: 1px solid var(--border-color);
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  font-size: 0.6rem;
+  width: 180px;
+  pointer-events: none;
+}
+
+.legend-title {
+  color: var(--text-dim);
+  font-weight: bold;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 4px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.line {
+  width: 15px;
+  height: 3px;
+  border-radius: 2px;
+}
+
 /* Resolution Log */
 .resolution-overlay {
   position: fixed;

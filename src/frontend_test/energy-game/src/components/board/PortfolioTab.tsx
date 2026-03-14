@@ -27,14 +27,12 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
   const isBiddingPhase = currentPhase === 'bidding';
   const isActionPhase = currentPhase === 'actionDeployment';
   
-  // Find all bids placed by the current player
   const myBids = Object.values(contracts).flatMap(contract => 
     contract.bids
       .filter(bid => bid.player_id === playerID)
       .map(bid => ({ ...bid, contract }))
   );
 
-  // Find bids from other players
   const otherBidsByPlayer: Record<string, any[]> = {};
   Object.values(contracts).forEach(contract => {
     contract.bids.forEach(bid => {
@@ -48,11 +46,11 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
   });
 
   const myActionCards = G.action_cards?.[playerID] || [];
-  const WEATHER_CARD_TYPES = ["POLAR_VORTEX", "HEAT_DOME", "MONSOON", "DEAD_CALM"];
+  const WEATHER_AND_PRICE_TYPES = ["POLAR_VORTEX", "HEAT_DOME", "MONSOON", "DEAD_CALM", "BOOST_ENERGY", "NERF_ENERGY"];
+  const PIPE_TYPES = ["CUT_CONDUCT", "FIX_CONDUCT", "DISCOUNT_CONDUCT"];
 
   return (
     <div className="tab-content" style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
-      {/* ACTION CARDS SECTION */}
       <div className="pane-header" style={{ background: 'transparent', padding: '0 0 15px 0', borderBottom: '1px solid var(--border-color)', marginBottom: '15px' }}>
         <span>OPERATOR ARSENAL</span>
         <span className="mono">{myActionCards.length} CARDS</span>
@@ -84,7 +82,8 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {myActionCards.map(card => {
               const isSelected = selectedCardId === card.card_id;
-              const isWeather = WEATHER_CARD_TYPES.includes(card.type);
+              const isPipe = PIPE_TYPES.includes(card.type);
+              const isWeatherOrPrice = WEATHER_AND_PRICE_TYPES.includes(card.type);
 
               return (
                 <div 
@@ -101,21 +100,15 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                     position: 'relative'
                   }}
                 >
-                  <div className="mono" style={{ color: isWeather ? 'var(--color-wind)' : 'var(--color-solar)' }}>
+                  <div className="mono" style={{ color: isPipe ? 'var(--color-solar)' : 'var(--color-wind)' }}>
                     {card.type.replace('_', ' ')}
                   </div>
                   <div className="mono" style={{ fontSize: '0.6rem', opacity: 0.6 }}>
-                    DURATION: {card.duration} DAYS
+                    TARGET: {isPipe ? 'CONDUCT' : 'COUNTRY'}
                   </div>
                   <button 
                     disabled={!isActionPhase}
-                    onClick={() => {
-                      if (isWeather) {
-                        onSelectCard?.(card.card_id);
-                      } else {
-                        onPlayCard?.(card.card_id);
-                      }
-                    }}
+                    onClick={() => onSelectCard?.(card.card_id)}
                     style={{
                       padding: '5px',
                       background: isActionPhase ? (isSelected ? 'var(--color-fossil)' : 'var(--color-solar)') : 'transparent',
@@ -126,7 +119,7 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                       fontWeight: 'bold'
                     }}
                   >
-                    {isSelected ? 'CANCEL' : (isWeather ? 'TARGET' : 'DEPLOY')}
+                    {isSelected ? 'CANCEL' : 'TARGET'}
                   </button>
                 </div>
               );

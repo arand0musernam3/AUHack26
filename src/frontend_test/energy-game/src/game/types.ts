@@ -24,6 +24,7 @@ export interface Conduct {
   base_cost: number;
   volume_capacity: number;
   is_broken: boolean;
+  discount_active: boolean;
 }
 
 export type ActionCardType =
@@ -35,20 +36,20 @@ export type ActionCardType =
   | "NERF_ENERGY"
   | "CUT_CONDUCT"
   | "FIX_CONDUCT"
-  | "DISCOUNT_CONDUCT"
-  | "NOPE_CARD";
+  | "DISCOUNT_CONDUCT";
 
 export interface ActionCardInstance {
   card_id: string;
   type: ActionCardType;
   face_down: boolean;
-  duration: number; // 1-3 days
+  duration: number; // For weather/price: days. For pipes: user specified rounds/days.
 }
 
 export interface PlayedCard {
   player_id: string;
   card: ActionCardInstance;
   target_country?: string;
+  target_pipe?: { from: string; to: string };
 }
 
 export interface ActiveModifier {
@@ -57,12 +58,17 @@ export interface ActiveModifier {
   original_duration: number;
 }
 
+export interface ActivePipeModifier {
+  type: ActionCardType;
+  remaining_rounds: number; // Conduct mods use rounds (1-3)
+  target: { from: string; to: string };
+}
+
 export interface RouteStep {
   country: string;
   cost: number;
 }
 
-// Data point for a single country/time
 export interface WeatherDataPoint {
   time: string;
   Wind: number;
@@ -72,8 +78,6 @@ export interface WeatherDataPoint {
   Nuclear: number;
   Consumption: number;
   Price: number;
-  
-  // RAW weather stats for Tooltip only
   temperature: number;
   wind_speed: number;
   cloud_cover: number;
@@ -106,8 +110,9 @@ export interface GameState {
   action_cards: Record<string, ActionCardInstance[]>;
   played_cards: PlayedCard[]; 
   active_modifiers: Record<string, ActiveModifier[]>; 
-  weather_data: CountryWeatherData; // UNMODIFIED weather data
-  modified_weather_data: CountryWeatherData; // MODIFIED weather data (for logic/UI)
+  active_pipe_modifiers: ActivePipeModifier[];
+  weather_data: CountryWeatherData;
+  modified_weather_data: CountryWeatherData;
   current_date: string;
   pipes: Pipe[];
   phase_deadline: number | null;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { GameState } from '../../game/types';
+import type { GameState, ActionCardInstance } from '../../game/types';
 import { PhaseHeader } from './PhaseHeader';
 import { MapPane } from './MapPane';
 import { SidePane } from './SidePane';
@@ -10,7 +10,7 @@ export interface BoardProps {
   ctx: any;
   moves: {
     submitBid: (tradeId: string, price: number, volume: number) => void;
-    playActionCard: (cardId: string, target?: string, faceDown?: boolean) => void;
+    playActionCard: (cardId: string, target?: string, isPipe?: boolean) => void;
     routeEnergy: (contractId: string, route: any[]) => void;
     buyActionCard: () => void;
     markReady: () => void;
@@ -22,7 +22,7 @@ export interface BoardProps {
 }
 
 export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => {
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [selectedCard, setSelectedCard] = useState<ActionCardInstance | null>(null);
 
   // Sync LOCAL player name from Lobby metadata
   useEffect(() => {
@@ -44,19 +44,35 @@ export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => 
   const isReady = readyPlayers.includes(playerID);
 
   const handleCountryClick = (countryId: string) => {
-    if (selectedCardId && ctx.phase === 'actionDeployment') {
-      moves.playActionCard(selectedCardId, countryId);
-      setSelectedCardId(null);
+    if (selectedCard && ctx.phase === 'actionDeployment') {
+      const isPipeCard = ["CUT_CONDUCT", "FIX_CONDUCT", "DISCOUNT_CONDUCT"].includes(selectedCard.type);
+      if (!isPipeCard) {
+        moves.playActionCard(selectedCard.card_id, countryId, false);
+        setSelectedCard(null);
+      }
+    }
+  };
+
+  const handlePipeClick = (pipeId: string) => {
+    if (selectedCard && ctx.phase === 'actionDeployment') {
+      const isPipeCard = ["CUT_CONDUCT", "FIX_CONDUCT", "DISCOUNT_CONDUCT"].includes(selectedCard.type);
+      if (isPipeCard) {
+        moves.playActionCard(selectedCard.card_id, pipeId, true);
+        setSelectedCard(null);
+      }
     }
   };
 
   const handleSelectCard = (cardId: string) => {
-    if (selectedCardId === cardId) {
-      setSelectedCardId(null);
+    if (selectedCard?.card_id === cardId) {
+      setSelectedCard(null);
     } else {
-      setSelectedCardId(cardId);
+      const card = G.action_cards[playerID].find(c => c.card_id === cardId);
+      if (card) setSelectedCard(card);
     }
   };
+
+  const isTargetingPipe = selectedCard && ["CUT_CONDUCT", "FIX_CONDUCT", "DISCOUNT_CONDUCT"].includes(selectedCard.type);
 
   return (
     <div className="game-board">
@@ -77,24 +93,27 @@ export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => 
           current_date={G.current_date} 
           pipes={G.pipes || []} 
           onCountryClick={handleCountryClick}
+          onPipeClick={handlePipeClick}
           activeModifiers={G.active_modifiers}
+          activePipeModifiers={G.active_pipe_modifiers}
           pendingPlays={G.played_cards}
-          isTargeting={!!selectedCardId}
+          isTargeting={!!selectedCard}
+          targetingType={isTargetingPipe ? 'pipe' : 'country'}
         />
         <SidePane 
           G={G} 
           ctx={ctx} 
           playerID={playerID} 
           moves={moves} 
-          selectedCardId={selectedCardId}
+          selectedCardId={selectedCard?.card_id || null}
           onSelectCard={handleSelectCard}
         />
       </main>
 
-      {selectedCardId && (
+      {selectedCard && (
         <div className="targeting-overlay mono">
-          SELECT TARGET COUNTRY ON MAP TO DEPLOY CARD
-          <button onClick={() => setSelectedCardId(null)}>CANCEL</button>
+          SELECT {isTargetingPipe ? 'INTERCONNECTION PIPE' : 'TARGET COUNTRY'} ON MAP TO DEPLOY {selectedCard.type.replace('_', ' ')}
+          <button onClick={() => setSelectedCard(null)}>CANCEL</button>
         </div>
       )}
 
