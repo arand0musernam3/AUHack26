@@ -14,7 +14,7 @@ export const Timer: React.FC<TimerProps> = ({ duration, onExpiry }) => {
 
   useEffect(() => {
     if (timeLeft <= 0) {
-      onExpiry();
+      // onExpiry();
       return;
     }
 

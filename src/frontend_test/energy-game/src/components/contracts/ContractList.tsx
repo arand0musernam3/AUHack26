@@ -3,20 +3,24 @@ import type { Contract } from '../../game/types';
 
 interface ContractListProps {
   contracts?: Record<string, Contract>;
+  title?: string;
 }
 
-export const ContractList: React.FC<ContractListProps> = ({ contracts = {} }) => {
+export const ContractList: React.FC<ContractListProps> = ({ 
+  contracts = {}, 
+  title = "Available Contracts" 
+}) => {
   const contractCount = Object.keys(contracts).length;
 
   return (
-    <div className="contract-list">
+    <div className="contract-list" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div className="pane-header">
-        <span>Available Contracts</span>
+        <span>{title}</span>
         <span className="mono">{contractCount} ITEMS</span>
       </div>
-      <div className="contract-grid" style={{ padding: '10px', overflowY: 'auto' }}>
+      <div className="contract-grid" style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
         {contractCount === 0 ? (
-          <div className="placeholder">No contracts available yet.</div>
+          <div className="placeholder">No contracts available in this sector.</div>
         ) : (
           Object.values(contracts).map((contract) => (
             <div 
@@ -24,21 +28,43 @@ export const ContractList: React.FC<ContractListProps> = ({ contracts = {} }) =>
               className="contract-card"
               style={{ 
                 border: '1px solid var(--border-color)', 
-                padding: '10px', 
-                marginBottom: '10px',
-                background: 'rgba(255,255,255,0.02)'
+                padding: '15px', 
+                marginBottom: '15px',
+                background: 'rgba(255,255,255,0.02)',
+                position: 'relative'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                <span className="mono" style={{ color: 'var(--color-wind)' }}>{contract.origin_country}</span>
-                <span className="mono">{contract.energy_type}</span>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '2px', height: '100%', background: 'var(--color-wind)' }}></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span className="mono" style={{ color: 'var(--color-wind)', fontWeight: 'bold' }}>{contract.origin_country}</span>
+                <span className="mono" style={{ fontSize: '0.75rem', opacity: 0.8 }}>{contract.energy_type.toUpperCase()}</span>
               </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                Volume: <span className="mono" style={{ color: 'var(--text-main)' }}>{contract.available_volume} MWh</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                  VOLUME<br />
+                  <span className="mono" style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{contract.available_volume} MWh</span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                  BASE PRICE<br />
+                  <span className="mono" style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>€{contract.base_price}/MWh</span>
+                </div>
               </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                Base: <span className="mono" style={{ color: 'var(--text-main)' }}>€{contract.base_price}/MWh</span>
-              </div>
+              <button 
+                className="mono"
+                style={{
+                  width: '100%',
+                  marginTop: '15px',
+                  padding: '8px',
+                  background: 'transparent',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--color-wind)',
+                  fontSize: '0.7rem',
+                  cursor: 'pointer',
+                  textTransform: 'uppercase'
+                }}
+              >
+                Place Bid
+              </button>
             </div>
           ))
         )}
