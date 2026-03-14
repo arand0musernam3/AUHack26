@@ -66,6 +66,7 @@ const advanceDate = (dateStr: string): string => {
 
 export const EnergyGame = {
   name: "energy-market",
+  minPlayers: 2,
   maxPlayers: 5,
 
   setup: ({ ctx }: { ctx: Ctx }): GameState => {
