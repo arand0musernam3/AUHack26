@@ -17,8 +17,8 @@ const MapChart = () => {
         scale: 1100
       }}
     >
-      <Geographies
-        geography="/features.json"
+        <Geographies 
+        geography="../../../countries-50m.json"
         fill="#D6D6DA"
         stroke="#FFFFFF"
         strokeWidth={0.5}
