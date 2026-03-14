@@ -61,9 +61,36 @@ export const EnergyGame = {
       ];
     }
 
+    const contracts = generateMockContracts();
+    
+    // Add some random bids for initial testing
+    Object.keys(contracts).forEach(id => {
+      // 30% chance of having bids
+      if (Math.random() > 0.7) {
+        const numBids = Math.floor(Math.random() * 3) + 1;
+        for (let i = 0; i < numBids; i++) {
+          const myId = "0";
+          contracts[id].bids.push({
+            player_id: myId,
+            price: contracts[id].base_price + Math.floor(Math.random() * 20) + 5,
+            volume: Math.floor(Math.random() * (contracts[id].available_volume / 2)) + 10,
+          });
+        }
+
+      } else {
+        // add some bids from other players
+        const otherPlayerId = Math.floor(Math.random() * ctx.numPlayers).toString();
+          contracts[id].bids.push({
+            player_id: otherPlayerId,
+            price: contracts[id].base_price + Math.floor(Math.random() * 20) + 5,
+            volume: Math.floor(Math.random() * (contracts[id].available_volume / 2)) + 10,
+          });
+      }
+    });
+
     return {
       phase_number: 1,
-      contracts: generateMockContracts(),
+      contracts,
       player_balances,
       ready_players: [],
       conducts: generateMockConducts(),

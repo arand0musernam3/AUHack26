@@ -48,6 +48,10 @@ export const ContractList: React.FC<ContractListProps> = ({
                   BASE PRICE<br />
                   <span className="mono" style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>€{contract.base_price}/MWh</span>
                 </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', gridColumn: 'span 2', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '5px' }}>
+                  BIDS<br />
+                  <span className="mono" style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{contract.bids.length} placed</span>
+                </div>
               </div>
               <button 
                 className="mono"

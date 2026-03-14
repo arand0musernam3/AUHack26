@@ -381,7 +381,7 @@ For each won contract that needs routing:
 - [ ] `RouteOverlay.tsx` + routing click logic in `EuropeMap.tsx`
 - [ ] `PlayerList.tsx` + `Toast.tsx`
 - [x] All TypeScript types in `game/types.ts`
-- [ ] Lobby / pre-game screen
+- [x] Lobby / pre-game screen
 - [x] Boardgame.io `Client` wired in `App.tsx`
 - [x] Full visual design system (CSS variables, energy colors, typography)
 
@@ -397,7 +397,7 @@ For each won contract that needs routing:
 - **Design System**: Established CSS variables and base styles in `src/index.css`.
 - **Dependencies**: Installed `boardgame.io` and `react-simple-maps`.
 - *Map Implementation*: Setup the basic europe map
+- Implement the general UI layout as described in the spec.
+- Create the initial login screen and lobby for players to join.
 
 ### Next Steps (Missing)
-1. Create the initial login screen and lobby for players to join.
-2. Implement the general UI layout as described in the spec.
