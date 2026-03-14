@@ -136,6 +136,8 @@ export interface GameState {
   current_day: number;
   total_days: number;
   positions: Position[];
+  resolution_log: string[];
+
 }
 export interface RouteStep {
   originCountryId: string;
@@ -146,5 +148,4 @@ export interface RouteStep {
   originCountryId: string;
   conductId: string;
   phase_deadline: number | null;
-  resolution_log: string[];
 }

@@ -26,6 +26,46 @@ const ENERGY_TYPES: EnergyType[] = [
  * Current day gets the most contracts, following days get progressively fewer.
  */
 const generateDeterministicContracts = (currentDay: number, totalDays: number): Record<string, Contract> => {
+  const contracts: Record<string, Contract> = {};
+  
+  // Deterministic values for volume and base price based on day, country, and type
+  const getVol = (day: number, cIdx: number, tIdx: number) => {
+    const base = 500 - (day - 1) * 50; // Further days have less volume
+    const seed = (day * 100) + (cIdx * 10) + tIdx;
+    return Math.max(100, base + (seed % 200));
+  };
+  
+  const getPrice = (day: number, cIdx: number, tIdx: number) => {
+    const seed = (day * 50) + (cIdx * 5) + tIdx;
+    return 20 + (seed % 30);
+  };
+
+  // Generate contracts for current day and next 2 days
+  for (let d = currentDay; d <= Math.min(currentDay + 2, totalDays); d++) {
+    // Number of countries depends on day: most on day 1
+    const countryCount = Math.max(2, 6 - (d - currentDay) * 2);
+    
+    for (let c = 0; c < countryCount; c++) {
+      const country = COUNTRIES[c % COUNTRIES.length];
+      for (let t = 0; t < ENERGY_TYPES.length; t++) {
+        const type = ENERGY_TYPES[t];
+        const contractId = `d${d}-c${c}-t${t}`;
+        contracts[contractId] = {
+          contract_id: contractId,
+          origin_country: country,
+          energy_type: type,
+          available_volume: getVol(d, c, t),
+          base_price: getPrice(d, c, t),
+          bids: [],
+          delivery_country: "DE",
+          delivery_day: d,
+        };
+      }
+    }
+  }
+  return contracts;
+};
+
 const MODIFIER_CONFIGS: Partial<Record<ActionCardType, any>> = {
   'POLAR_VORTEX': { Wind: 1.30, Solar: 0.10, Fossil: 0.95, Nuclear: 1.0, Water: 1.0, Consumption: 1.15, Price: 1.20 },
   'HEAT_DOME': { Wind: 0.80, Solar: 1.50, Fossil: 1.05, Nuclear: 0.85, Water: 0.70, Consumption: 1.10, Price: 1.15 },
@@ -136,6 +176,7 @@ const advanceDate = (dateStr: string): string => {
 export const EnergyGame = {
   name: "energy-market",
   maxPlayers: 5,
+  minPlayers: 2,
 
   setup: ({ ctx }: { ctx: Ctx }): GameState => {
     const player_balances: Record<string, number> = {};
