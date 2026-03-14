@@ -39,7 +39,7 @@ export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => 
 
       <main className="game-layout">
         <MapPane />
-        <SidePane G={G} ctx={ctx} playerID={playerID} />
+        <SidePane G={G} ctx={ctx} playerID={playerID} moves={moves} />
       </main>
     </div>
   );

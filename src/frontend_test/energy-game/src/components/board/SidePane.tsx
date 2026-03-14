@@ -8,13 +8,21 @@ interface SidePaneProps {
   G: GameState;
   ctx: any;
   playerID: string;
+  moves: {
+    submitBid: (tradeId: string, price: number, volume: number) => void;
+    playActionCard: (cardId: string, target?: string, faceDown?: boolean) => void;
+    routeEnergy: (contractId: string, route: any[]) => void;
+    buyActionCard: () => void;
+    markReady: () => void;
+  };
 }
 
 type TabType = 'market' | 'portfolio' | 'operator';
 
-export const SidePane: React.FC<SidePaneProps> = ({ G, ctx, playerID }) => {
+export const SidePane: React.FC<SidePaneProps> = ({ G, ctx, playerID, moves }) => {
   const [activeTab, setActiveTab] = useState<TabType>('market');
 
+  console.log(G.action_cards);
   const playerBalances = G.player_balances || {};
   const readyPlayers = G.ready_players || [];
   const actionCards = G.action_cards ? G.action_cards[playerID] : [];
@@ -32,6 +40,8 @@ export const SidePane: React.FC<SidePaneProps> = ({ G, ctx, playerID }) => {
             playerBalances={playerBalances}
             readyPlayers={readyPlayers}
             actionCards={actionCards || []}
+            onBuyCard={() => moves.buyActionCard()}
+            onDeployCard={(cardId) => moves.playActionCard(cardId)}
           />
         );
       default:
