@@ -7,10 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node -r esm src/server.js"
   },
   "dependencies": {
     "boardgame.io": "^0.50.2",
+    "esm": "^3.2.25",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-simple-maps": "^1.0.0"

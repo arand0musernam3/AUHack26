@@ -1,10 +1,12 @@
-import { INVALID_MOVE } from "boardgame.io/core";
-import type { Ctx } from "boardgame.io";
+import { INVALID_MOVE } from 'boardgame.io/dist/cjs/core.js';
+import type { Ctx } from 'boardgame.io';
 import type {
   EnergyType,
   Contract,
   Conduct,
   ActionCardType,
+  ActionCardInstance,  // add this
+  RouteStep,           // add this
   GameState,
 } from "./types";
 
