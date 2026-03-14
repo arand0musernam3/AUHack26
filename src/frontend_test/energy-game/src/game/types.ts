@@ -6,7 +6,6 @@ export interface Bid {
   player_id: string;
   price: number;
   volume: number;
-  is_short?: boolean;
 }
 
 export interface Contract {
@@ -17,20 +16,6 @@ export interface Contract {
   available_volume: number;
   base_price: number;
   bids: Bid[];
-  delivery_day: number;
-}
-
-export interface Position {
-  player_id: string;
-  contract_id: string;
-  origin_country: string;
-  energy_type: EnergyType;
-  volume: number;
-  bid_price: number;
-  base_price: number;
-  is_short: boolean;
-  day_placed: number;
-  period_placed: DayPeriod;
 }
 
 export interface Conduct {
@@ -57,7 +42,7 @@ export interface ActionCardInstance {
   card_id: string;
   type: ActionCardType;
   face_down: boolean;
-  duration: number; // For weather/price: days. For pipes: user specified rounds/days.
+  duration: number; // For weather/price: days. For pipes: rounds.
 }
 
 export interface PlayedCard {
@@ -75,13 +60,8 @@ export interface ActiveModifier {
 
 export interface ActivePipeModifier {
   type: ActionCardType;
-  remaining_rounds: number; // Conduct mods use rounds (1-3)
+  remaining_rounds: number;
   target: { from: string; to: string };
-}
-
-export interface RouteStep {
-  country: string;
-  cost: number;
 }
 
 export interface WeatherDataPoint {
@@ -96,10 +76,6 @@ export interface WeatherDataPoint {
   temperature: number;
   wind_speed: number;
   cloud_cover: number;
-  precipitation: number;
-  consumption?: number;
-  generation?: Record<string, number>;
-  mix_percentages?: Record<string, number>;
 }
 
 export interface WeatherDataEntry {
@@ -117,6 +93,8 @@ export interface Pipe {
 
 export interface GameState {
   phase_number: number;
+  current_period: DayPeriod;
+  periods_completed: DayPeriod[];
   contracts: Record<string, Contract>;
   player_balances: Record<string, number>;
   player_names: Record<string, string>;
@@ -130,18 +108,12 @@ export interface GameState {
   modified_weather_data: CountryWeatherData;
   current_date: string;
   pipes: Pipe[];
-  current_period: DayPeriod;
-  periods_completed: DayPeriod[];
   phase_deadline: number | null;  // Unix ms timestamp, null when no timer is active
   current_day: number;
   total_days: number;
   positions: Position[];
   resolution_log: string[];
 
-}
-export interface RouteStep {
-  originCountryId: string;
-  conductId: string;
 }
 
 export interface RouteStep {

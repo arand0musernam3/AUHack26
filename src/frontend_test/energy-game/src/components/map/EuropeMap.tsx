@@ -143,10 +143,22 @@ export const EuropeMap: React.FC<EuropeMapProps> = ({
           const end = countryCenters[pipe.to];
           if (!start || !end) return null;
 
-          const isPending = pendingPlays.some(p => p.target_pipe?.from === pipe.from && p.target_pipe?.to === pipe.to);
+          const isPending = pendingPlays.some(p => 
+            p.target_pipe && 
+            ((p.target_pipe.from === pipe.from && p.target_pipe.to === pipe.to) ||
+             (p.target_pipe.from === pipe.to && p.target_pipe.to === pipe.from))
+          );
           
-          const activeBroken = activePipeModifiers.find(m => m.type === 'CUT_CONDUCT' && m.target.from === pipe.from && m.target.to === pipe.to);
-          const activeDiscount = activePipeModifiers.find(m => m.type === 'DISCOUNT_CONDUCT' && m.target.from === pipe.from && m.target.to === pipe.to);
+          const activeBroken = activePipeModifiers.find(m => 
+            m.type === 'CUT_CONDUCT' && 
+            ((m.target.from === pipe.from && m.target.to === pipe.to) ||
+             (m.target.from === pipe.to && m.target.to === pipe.from))
+          );
+          const activeDiscount = activePipeModifiers.find(m => 
+            m.type === 'DISCOUNT_CONDUCT' && 
+            ((m.target.from === pipe.from && m.target.to === pipe.to) ||
+             (m.target.from === pipe.to && m.target.to === pipe.from))
+          );
 
           let strokeColor = "rgba(0, 229, 255, 0.3)";
           if (activeBroken) strokeColor = "var(--color-fossil)"; // RED

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { EuropeMap } from '../map/EuropeMap';
-import type { CountryWeatherData, ActiveModifier, PlayedCard, Pipe, ActivePipeModifier } from '../../game/types';
+import type { CountryWeatherData, ActiveModifier, PlayedCard, Pipe, ActivePipeModifier, WeatherDataPoint } from '../../game/types';
 
 interface MapPaneProps {
   weather_data: CountryWeatherData;
@@ -23,6 +23,17 @@ const getCountryId = (name: string): string => {
     'Austria': 'AT', 'Switzerland': 'CH'
   };
   return mapping[name] || name;
+};
+
+// Deterministic-ish noise based on day and country to avoid flickering on every render
+const getNoisyValue = (val: number, dayOffset: number, countryId: string) => {
+  const noiseMap = [0.05, 0.10, 0.15];
+  const maxNoise = noiseMap[dayOffset] || 0.05;
+  // Use a simple seed from countryId and dayOffset for stability
+  const seed = countryId.charCodeAt(0) + dayOffset;
+  const pseudoRandom = (Math.sin(seed) + 1) / 2; // 0 to 1
+  const multiplier = 1 + (pseudoRandom * (maxNoise * 2) - maxNoise);
+  return val * multiplier;
 };
 
 export const MapPane: React.FC<MapPaneProps> = ({ 
@@ -56,26 +67,19 @@ export const MapPane: React.FC<MapPaneProps> = ({
     const totalPending = pending.length;
 
     return (
-      <div className="country-tooltip mono" style={{ width: '280px', maxHeight: '80vh', overflowY: 'auto' }}>
+      <div className="country-tooltip mono" style={{ width: '300px', maxHeight: '80vh', overflowY: 'auto' }}>
         <div className="tooltip-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span>{countryName.toUpperCase()} Terminal</span>
           <span style={{ color: 'var(--text-dim)' }}>{countryId}</span>
         </div>
         
         <div className="tooltip-section">
-          <div className="tooltip-label">METRICS:</div>
+          <div className="tooltip-label">LIVE METRICS:</div>
           <div className="tooltip-grid">
             <div className="stat">TEMP: {data.temperature.toFixed(1)}°C</div>
-            <div className="stat">WIND: {data.wind_speed.toFixed(1)}k</div>
+            <div className="stat">WIND: {data.wind_speed.toFixed(1)} km/h</div>
             <div className="stat">CLOU: {data.cloud_cover.toFixed(0)}%</div>
             <div className="stat">PRIC: €{data.Price.toFixed(1)}</div>
-          </div>
-        </div>
-
-        <div className="tooltip-section">
-          <div className="tooltip-label">GRID LOAD:</div>
-          <div className="tooltip-grid">
-            <div className="stat">CONS: {Math.round(data.Consumption).toLocaleString()} MW</div>
           </div>
         </div>
 
@@ -117,15 +121,41 @@ export const MapPane: React.FC<MapPaneProps> = ({
         )}
 
         <div className="tooltip-section" style={{ borderTop: '1px solid #333', marginTop: '10px', paddingTop: '8px' }}>
-          <div className="tooltip-label">3-DAY FORECAST:</div>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-            {entry.forecast.slice(0, 3).map((f, i) => (
-              <div key={i} style={{ flex: 1, fontSize: '0.6rem', textAlign: 'center' }}>
-                <div style={{ color: 'var(--color-wind)', marginBottom: '2px' }}>D+{i+1}</div>
-                <div>{f.temperature.toFixed(0)}°C</div>
-                <div>{f.wind_speed.toFixed(0)}k</div>
-              </div>
-            ))}
+          <div className="tooltip-label">3-DAY STRATEGIC FORECAST:</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+            {entry.forecast.slice(0, 3).map((f, i) => {
+              const noisyPrice = getNoisyValue(f.Price, i, countryId);
+              
+              // Find top 3 energy sources for that day
+              const types = ['Wind', 'Solar', 'Water', 'Fossil', 'Nuclear'];
+              const genData = types.map(t => ({ type: t, val: getNoisyValue((f as any)[t] || 0, i, countryId) }));
+              const totalGen = genData.reduce((acc, curr) => acc + curr.val, 0);
+              const top3 = genData
+                .sort((a, b) => b.val - a.val)
+                .slice(0, 3);
+
+              const noiseMapLabels = ["±5%", "±10%", "±15%"];
+
+              return (
+                <div key={i} style={{ background: 'rgba(255,255,255,0.03)', padding: '6px', borderRadius: '2px' }}>
+                  <div style={{ color: 'var(--color-wind)', fontSize: '0.65rem', marginBottom: '4px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>D+{i+1} PREDICTIONS</span>
+                    <span style={{ opacity: 0.6 }}>({noiseMapLabels[i]} UNCERTAINTY)</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--text-dim)' }}>EST. PRICE:</span>
+                    <span style={{ color: 'var(--text-main)' }}>€{noisyPrice.toFixed(1)}</span>
+                  </div>
+                  <div style={{ color: 'var(--text-dim)', fontSize: '0.55rem', marginBottom: '2px' }}>TOP PRODUCERS:</div>
+                  {top3.map(p => (
+                    <div key={p.type} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.55rem', opacity: 0.8 }}>
+                      <span>{p.type.toUpperCase()}</span>
+                      <span>{totalGen > 0 ? ((p.val / totalGen) * 100).toFixed(1) : 0}%</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -136,8 +166,10 @@ export const MapPane: React.FC<MapPaneProps> = ({
     const hourlyCapacity = Math.round(pipe.capacity);
     const transitCapacity = hourlyCapacity * 12;
     
-    const activeBroken = activePipeModifiers.find(m => m.type === 'CUT_CONDUCT' && m.target.from === pipe.from && m.target.to === pipe.to);
-    const activeDiscount = activePipeModifiers.find(m => m.type === 'DISCOUNT_CONDUCT' && m.target.from === pipe.from && m.target.to === pipe.to);
+    const activeBroken = activePipeModifiers.find(m => m.type === 'CUT_CONDUCT' && 
+      ((m.target.from === pipe.from && m.target.to === pipe.to) || (m.target.from === pipe.to && m.target.to === pipe.from)));
+    const activeDiscount = activePipeModifiers.find(m => m.type === 'DISCOUNT_CONDUCT' && 
+      ((m.target.from === pipe.from && m.target.to === pipe.to) || (m.target.from === pipe.to && m.target.to === pipe.from)));
     const pending = pendingPlays.filter(p => p.target_pipe?.from === pipe.from && p.target_pipe?.to === pipe.to);
 
     return (
@@ -177,10 +209,12 @@ export const MapPane: React.FC<MapPaneProps> = ({
     );
   };
 
+  const formattedDateTime = current_date.replace('T', ' ');
+
   return (
     <section className="map-pane">
       <div className="map-header pane-header">
-        <span className="mono">EUROPEAN GRID STATUS — {current_date.slice(0,10)}</span>
+        <span className="mono">EUROPEAN GRID STATUS — {formattedDateTime}</span>
         {isTargeting && <span className="targeting-pulse mono">SELECT {targetingType.toUpperCase()}</span>}
       </div>
       
@@ -211,7 +245,6 @@ export const MapPane: React.FC<MapPaneProps> = ({
           </div>
         )}
 
-        {/* Color Legend in bottom right */}
         <div className="map-legend mono">
           <div className="legend-section">
             <div className="legend-title">COUNTRIES</div>
