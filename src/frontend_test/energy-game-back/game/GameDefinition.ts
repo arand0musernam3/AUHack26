@@ -5,14 +5,9 @@ import type {
   Contract,
   Conduct,
   ActionCardType,
-  ActionCardInstance,
-  RouteStep,
   GameState,
-  CountryWeatherData,
   DayPeriod,
 } from "./types";
-
-import * as weatherReader from "./weatherReader";
 
 type MoveContext = { G: GameState; ctx: Ctx; playerID: string };
 
@@ -131,54 +126,25 @@ const phaseConfig = (nextPhase?: string | ((...args: any[]) => string)) => ({
 
 export const EnergyGame = {
   name: "energy-market",
-  maxPlayers: 5,
 
   setup: ({ ctx }: { ctx: Ctx }): GameState => {
     const player_balances: Record<string, number> = {};
     const action_cards: Record<string, ActionCardInstance[]> = {};
 
-    // Create player data for exactly the number of players in the match
     for (let i = 0; i < ctx.numPlayers; i++) {
       const playerId = i.toString();
       player_balances[playerId] = 100000;
 
-    const numCards = i === 0 ? 5 : 2;
-    action_cards[playerId] = Array.from({ length: numCards }).map(
-      (_, cardIndex) => ({
-        card_id: `card-${playerId}-${cardIndex}`,
-        type: ACTION_CARD_TYPES[
-          Math.floor(Math.random() * ACTION_CARD_TYPES.length)
-        ],
-        face_down: false,
-      }),
-    );
-  };
-    let weather_data: Record<string, CountryWeatherData> = {};
-    let current_date = '2024-01-01T00:00';
-    let pipes: any[] = [];
-
-    // In Node environment, weatherReader will have access to fs
-    if (typeof window === 'undefined') {
-      current_date = weatherReader.getRandomWeatherDate();
-      weather_data = weatherReader.loadWeatherForDate(current_date);
-      const activeCountryNames = Object.keys(weather_data);
-      pipes = weatherReader.getHistoricalPipes(activeCountryNames);
-    } else {
-      // Provide some mock data if running in browser for testing
-      weather_data = {
-        'Germany': {
-          current: { time: current_date, temperature: 15, wind_speed: 10, cloud_cover: 50, precipitation: 0, consumption: 45000, generation: { Fossil: 20000, Wind: 15000, Solar: 5000, Water: 2000, Nuclear: 3000 }, mix_percentages: { Fossil: 44.4, Wind: 33.3, Solar: 11.1, Water: 4.4, Nuclear: 6.7 } },
-          forecast: [
-            { time: '2024-01-02T00:00', temperature: 16, wind_speed: 12, cloud_cover: 40, precipitation: 0 },
-            { time: '2024-01-03T00:00', temperature: 14, wind_speed: 15, cloud_cover: 60, precipitation: 0 },
-            { time: '2024-01-04T00:00', temperature: 12, wind_speed: 8, cloud_cover: 80, precipitation: 0.1 },
-          ]
-        }
-      };
-      pipes = [
-        { from: 'Germany', to: 'France', capacity: 3000 },
-        { from: 'Germany', to: 'Poland', capacity: 2000 },
-      ];
+      const numCards = i === 0 ? 5 : 2;
+      action_cards[playerId] = Array.from({ length: numCards }).map(
+        (_, cardIndex) => ({
+          card_id: `card-${playerId}-${cardIndex}`,
+          type: ACTION_CARD_TYPES[
+            Math.floor(Math.random() * ACTION_CARD_TYPES.length)
+          ],
+          face_down: false,
+        }),
+      );
     }
 
     const contracts = generateMockContracts();
@@ -201,11 +167,8 @@ export const EnergyGame = {
       current_period: "morning",
       periods_completed: [],
       phase_deadline: null,
-    weather_data,
-    current_date,
-    pipes,
-  };
-},
+    };
+  },
 
   phases: {
     // forecasting: {

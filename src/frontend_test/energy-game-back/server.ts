@@ -9,6 +9,7 @@ const server = Server({
     // Development
     Origins.LOCALHOST,
     "http://localhost:5173",
+    "http://10.192.50.21:5173",
     // Production — replace with your deployed frontend URL
     'https://your-game-frontend.com',
   ],
@@ -18,16 +19,6 @@ const server = Server({
 
   // Optional: plug in a real DB (see DB section below)
   // db: new FlatFileDB(),
-
-  // Optional: authenticate moves server-side
-  generateCredentials: (ctx: any) => {
-    return crypto.randomUUID(); // Generate a unique credential for the player
-  },
-  authenticateCredentials: (credentials: string, playerMetadata: any) => {
-    console.log('Authenticating credentials:', credentials, 'for playerMetadata:', playerMetadata);
-    return true;
-    // return credentials === playerMetadata.credentials;
-  },
 });
 
 const PORT = Number(process.env.PORT) || 8000;

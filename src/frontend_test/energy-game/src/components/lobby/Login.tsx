@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { LobbyClient } from 'boardgame.io/client';
+import React, { useState } from "react";
+import { GameBoard } from "../board/GameBoard";
+import { EnergyGame } from "../../game/GameDefinition";
+import { Lobby } from "boardgame.io/react";
 
 interface LoginProps {
   lobbyClient: LobbyClient;
@@ -7,9 +9,9 @@ interface LoginProps {
   onJoin: (matchID: string, playerID: string, credentials: string) => void;
 }
 
-export const Login: React.FC<LoginProps> = ({ lobbyClient, gameName, onJoin }) => {
-  const [playerName, setPlayerName] = useState('');
-  const [loading, setLoading] = useState(false);
+export const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const [name, setName] = useState("");
+  console.log("Login component rendering");
 
   const startSession = async () => {
     setLoading(true);
@@ -55,20 +57,26 @@ export const Login: React.FC<LoginProps> = ({ lobbyClient, gameName, onJoin }) =
 
   return (
     <div className="login-container">
-       <h1 className="login-title">ENERGY MARKET</h1>
-       <input 
-         className="login-input"
-         value={playerName} 
-         onChange={(e) => setPlayerName(e.target.value)} 
-         placeholder="ENTER NAME"
-       />
-       <button 
-         className="login-button" 
-         onClick={startSession} 
-         disabled={loading || !playerName}
-       >
-         {loading ? "CONNECTING..." : "INITIALIZE SESSION"}
-       </button>
+      <div className="login-card">
+        <h1 className="login-title">ENERGY MARKET</h1>
+        <p className="login-subtitle">Industrial Control Room Terminal</p>
+        <form onSubmit={handleSubmit} className="login-form">
+          <div className="form-group">
+            <Lobby
+              gameServer={`http://${window.location.hostname}:8000`}
+              lobbyServer={`http://${window.location.hostname}:8000`}
+              gameComponents={[{ game: EnergyGame, board: GameBoard }]}
+            />
+          </div>
+          <button
+            type="submit"
+            className="login-button mono"
+            disabled={!name.trim()}
+          >
+            INITIALIZE SESSION
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

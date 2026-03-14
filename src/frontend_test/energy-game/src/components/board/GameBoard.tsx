@@ -19,6 +19,8 @@ export interface BoardProps {
   isMultiplayer: boolean;
 }
 
+import { useEffect, useState } from 'react';
+
 export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => {
   // Guard against undefined G or properties
   if (!G) {
@@ -31,7 +33,7 @@ export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => 
   return (
     <div className="game-board">
       <PhaseHeader 
-        phase={ctx?.phase || 'Unknown'} 
+        phase={G.current_period + " " + G.periods_completed?.length + "/15"}
         onTimerExpiry={() => moves.markReady()}
         isReady={isReady}
         onReadyClick={() => moves.markReady()}
