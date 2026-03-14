@@ -213,20 +213,114 @@ body {
   font-family: var(--font-data);
 }
 
-.contract-card {
-  border: 1px solid var(--border-color);
-  background: rgba(255,255,255,0.02);
-  margin-bottom: 15px;
+/* Tooltip & Targeting */
+.country-tooltip {
+  background: rgba(10, 12, 15, 0.95);
+  border: 1px solid var(--color-wind);
   padding: 15px;
-  position: relative;
+  width: 250px;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+  pointer-events: none;
 }
 
-.placeholder {
-  padding: 40px;
-  text-align: center;
+.tooltip-header {
+  border-bottom: 1px solid var(--color-wind);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  color: var(--color-wind);
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+.tooltip-section {
+  margin-bottom: 10px;
+}
+
+.tooltip-label {
+  font-size: 0.6rem;
   color: var(--text-dim);
-  font-style: italic;
-  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.tooltip-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  font-size: 0.7rem;
+}
+
+.stat {
+  color: var(--text-main);
+}
+
+.tooltip-active {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 179, 0, 0.3);
+}
+
+.tooltip-pending {
+  margin-top: 8px;
+}
+
+.targeting-pulse {
+  color: var(--color-fossil);
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+.targeting-overlay {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-solar);
+  color: black;
+  padding: 10px 20px;
+  font-weight: bold;
+  z-index: 1000;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  box-shadow: 0 0 30px rgba(255, 179, 0, 0.5);
+}
+
+.targeting-overlay button {
+  background: black;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: var(--font-data);
+}
+
+/* Resolution Log */
+.resolution-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  padding: 60px;
+}
+
+.log-container {
+  max-width: 800px;
+  margin: 40px auto;
+  width: 100%;
+}
+
+.log-entry {
+  padding: 10px;
+  border-left: 2px solid var(--color-wind);
+  background: rgba(255,255,255,0.02);
+  margin-bottom: 10px;
+  font-family: var(--font-data);
 }
 
 ::-webkit-scrollbar {

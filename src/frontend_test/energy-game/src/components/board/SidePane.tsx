@@ -9,9 +9,18 @@ interface SidePaneProps {
   ctx: any;
   playerID: string;
   moves: any;
+  selectedCardId?: string | null;
+  onSelectCard?: (cardId: string) => void;
 }
 
-export const SidePane: React.FC<SidePaneProps> = ({ G, ctx, playerID, moves }) => {
+export const SidePane: React.FC<SidePaneProps> = ({ 
+  G, 
+  ctx, 
+  playerID, 
+  moves,
+  selectedCardId,
+  onSelectCard
+}) => {
   const [activeTab, setActiveTab] = useState<'contracts' | 'portfolio' | 'operators'>('contracts');
 
   const renderTabContent = () => {
@@ -46,6 +55,8 @@ export const SidePane: React.FC<SidePaneProps> = ({ G, ctx, playerID, moves }) =
               onPlayCard={(id, target, faceDown) => moves.playActionCard(id, target, faceDown)}
               onBuyCard={() => moves.buyActionCard()}
               disabled={ctx.phase !== 'actionDeployment'}
+              selectedCardId={selectedCardId}
+              onSelectCard={onSelectCard}
             />
           </div>
         );

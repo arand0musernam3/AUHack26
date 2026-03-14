@@ -8,6 +8,8 @@ interface PortfolioTabProps {
   onPlayCard?: (cardId: string, target?: string, faceDown?: boolean) => void;
   onBuyCard?: () => void;
   disabled?: boolean;
+  selectedCardId?: string | null;
+  onSelectCard?: (cardId: string) => void;
 }
 
 export const PortfolioTab: React.FC<PortfolioTabProps> = ({ 
@@ -16,7 +18,9 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
   ctx,
   onPlayCard,
   onBuyCard,
-  disabled = false
+  disabled = false,
+  selectedCardId,
+  onSelectCard
 }) => {
   const contracts = G.contracts || {};
   const currentPhase = ctx?.phase;
@@ -44,13 +48,10 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
   });
 
   const myActionCards = G.action_cards?.[playerID] || [];
+  const WEATHER_CARD_TYPES = ["POLAR_VORTEX", "HEAT_DOME", "MONSOON", "DEAD_CALM"];
 
   return (
-    <div className="tab-content" style={{ 
-      padding: '20px', 
-      overflowY: 'auto', 
-      flex: 1
-    }}>
+    <div className="tab-content" style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
       {/* ACTION CARDS SECTION */}
       <div className="pane-header" style={{ background: 'transparent', padding: '0 0 15px 0', borderBottom: '1px solid var(--border-color)', marginBottom: '15px' }}>
         <span>OPERATOR ARSENAL</span>
@@ -58,7 +59,6 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
       </div>
 
       <div style={{ marginBottom: '25px' }}>
-        {/* BUYING: Let them buy anytime except resolution */}
         <button 
           onClick={onBuyCard}
           disabled={currentPhase === 'resolution' || G.player_balances[playerID] < 5000}
@@ -82,38 +82,55 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            {myActionCards.map(card => (
-              <div 
-                key={card.card_id}
-                style={{
-                  border: '1px solid var(--border-color)',
-                  padding: '10px',
-                  background: 'rgba(255,255,255,0.02)',
-                  fontSize: '0.7rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                  opacity: isActionPhase ? 1 : 0.6
-                }}
-              >
-                <div className="mono" style={{ color: 'var(--color-solar)' }}>{card.type.replace('_', ' ')}</div>
-                <button 
-                  disabled={!isActionPhase}
-                  onClick={() => onPlayCard?.(card.card_id)}
+            {myActionCards.map(card => {
+              const isSelected = selectedCardId === card.card_id;
+              const isWeather = WEATHER_CARD_TYPES.includes(card.type);
+
+              return (
+                <div 
+                  key={card.card_id}
                   style={{
-                    padding: '5px',
-                    background: isActionPhase ? 'var(--color-solar)' : 'transparent',
-                    color: isActionPhase ? 'black' : 'var(--text-dim)',
-                    border: isActionPhase ? 'none' : '1px solid var(--border-color)',
-                    cursor: isActionPhase ? 'pointer' : 'not-allowed',
-                    fontSize: '0.65rem',
-                    fontWeight: 'bold'
+                    border: isSelected ? '1px solid var(--color-solar)' : '1px solid var(--border-color)',
+                    padding: '10px',
+                    background: isSelected ? 'rgba(255, 179, 0, 0.1)' : 'rgba(255,255,255,0.02)',
+                    fontSize: '0.7rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    opacity: isActionPhase ? 1 : 0.6,
+                    position: 'relative'
                   }}
                 >
-                  DEPLOY
-                </button>
-              </div>
-            ))}
+                  <div className="mono" style={{ color: isWeather ? 'var(--color-wind)' : 'var(--color-solar)' }}>
+                    {card.type.replace('_', ' ')}
+                  </div>
+                  <div className="mono" style={{ fontSize: '0.6rem', opacity: 0.6 }}>
+                    DURATION: {card.duration} DAYS
+                  </div>
+                  <button 
+                    disabled={!isActionPhase}
+                    onClick={() => {
+                      if (isWeather) {
+                        onSelectCard?.(card.card_id);
+                      } else {
+                        onPlayCard?.(card.card_id);
+                      }
+                    }}
+                    style={{
+                      padding: '5px',
+                      background: isActionPhase ? (isSelected ? 'var(--color-fossil)' : 'var(--color-solar)') : 'transparent',
+                      color: isActionPhase ? 'black' : 'var(--text-dim)',
+                      border: isActionPhase ? 'none' : '1px solid var(--border-color)',
+                      cursor: isActionPhase ? 'pointer' : 'not-allowed',
+                      fontSize: '0.65rem',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {isSelected ? 'CANCEL' : (isWeather ? 'TARGET' : 'DEPLOY')}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

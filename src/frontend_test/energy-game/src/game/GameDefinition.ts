@@ -6,15 +6,12 @@ import type {
   Conduct,
   ActionCardType,
   ActionCardInstance,
-  RouteStep,
   GameState,
+  ActiveModifier,
   CountryWeatherData,
-  DayPeriod,
 } from "./types";
 
 import * as weatherReader from "./weatherReader";
-
-type MoveContext = { G: GameState; ctx: Ctx; playerID: string };
 
 const COUNTRIES = [
   "DE", "FR", "ES", "PT", "IT", "NL", "BE", "DK", "NO", "SE", "FI", "PL", "CZ", "AT", "CH",
@@ -22,6 +19,42 @@ const COUNTRIES = [
 const ENERGY_TYPES: EnergyType[] = [
   "Wind", "Solar", "Water", "Fossil", "Nuclear",
 ];
+
+const MODIFIER_CONFIGS: Partial<Record<ActionCardType, any>> = {
+  'POLAR_VORTEX': { Wind: 1.30, Solar: 0.10, Fossil: 0.95, Nuclear: 1.0, Water: 1.0, Consumption: 1.15, Price: 1.20 },
+  'HEAT_DOME': { Wind: 0.80, Solar: 1.50, Fossil: 1.05, Nuclear: 0.85, Water: 0.70, Consumption: 1.10, Price: 1.15 },
+  'MONSOON': { Wind: 0.60, Solar: 0.20, Fossil: 1.10, Nuclear: 1.0, Water: 1.40, Consumption: 0.95, Price: 1.05 },
+  'DEAD_CALM': { Wind: 0.10, Solar: 1.20, Fossil: 1.10, Nuclear: 1.10, Water: 1.0, Consumption: 0.90, Price: 0.95 }
+};
+
+const MODIFIER_FIELDS = ['Wind', 'Solar', 'Fossil', 'Nuclear', 'Water', 'Consumption', 'Price'];
+
+function applyModifiersToState(G: GameState) {
+  const newModified: CountryWeatherData = JSON.parse(JSON.stringify(G.weather_data));
+  
+  Object.keys(newModified).forEach(country => {
+    const mods = G.active_modifiers[country] || [];
+    mods.forEach(mod => {
+      const config = MODIFIER_CONFIGS[mod.type];
+      if (config) {
+        // Apply to current
+        MODIFIER_FIELDS.forEach(field => {
+          const multiplier = config[field] ?? 1.0;
+          (newModified[country].current as any)[field] *= multiplier;
+        });
+        // Apply to forecast
+        newModified[country].forecast.forEach(f => {
+          MODIFIER_FIELDS.forEach(field => {
+            const multiplier = config[field] ?? 1.0;
+            (f as any)[field] *= multiplier;
+          });
+        });
+      }
+    });
+  });
+  
+  G.modified_weather_data = newModified;
+}
 
 const generateMockContracts = (): Record<string, Contract> => {
   const contracts: Record<string, Contract> = {};
@@ -53,10 +86,15 @@ const generateMockConducts = (): Conduct[] => {
   ];
 };
 
-const ACTION_CARD_TYPES: ActionCardType[] = [
-  "POLAR_VORTEX", "HEAT_DOME", "MONSOON", "DEAD_CALM", "BOOST_ENERGY",
-  "NERF_ENERGY", "CUT_CONDUCT", "FIX_CONDUCT", "DISCOUNT_CONDUCT", "NOPE_CARD",
+const WEATHER_CARD_TYPES: ActionCardType[] = [
+  "POLAR_VORTEX", "HEAT_DOME", "MONSOON", "DEAD_CALM"
 ];
+
+const OTHER_CARD_TYPES: ActionCardType[] = [
+  "BOOST_ENERGY", "NERF_ENERGY", "CUT_CONDUCT", "FIX_CONDUCT", "DISCOUNT_CONDUCT", "NOPE_CARD",
+];
+
+const ALL_CARD_TYPES = [...WEATHER_CARD_TYPES, ...OTHER_CARD_TYPES];
 
 const advanceDate = (dateStr: string): string => {
   const date = new Date(dateStr);
@@ -66,7 +104,6 @@ const advanceDate = (dateStr: string): string => {
 
 export const EnergyGame = {
   name: "energy-market",
-  minPlayers: 2,
   maxPlayers: 5,
 
   setup: ({ ctx }: { ctx: Ctx }): GameState => {
@@ -80,8 +117,9 @@ export const EnergyGame = {
       player_names[playerId] = `OP_${playerId}`; 
       action_cards[playerId] = Array.from({ length: 2 }).map((_, idx) => ({
         card_id: `card-${playerId}-${idx}-${Date.now()}`,
-        type: ACTION_CARD_TYPES[Math.floor(Math.random() * ACTION_CARD_TYPES.length)],
+        type: ALL_CARD_TYPES[Math.floor(Math.random() * ALL_CARD_TYPES.length)],
         face_down: false,
+        duration: Math.floor(Math.random() * 3) + 2,
       }));
     }
 
@@ -95,7 +133,7 @@ export const EnergyGame = {
       pipes = weatherReader.getHistoricalPipes(Object.keys(weather_data));
     }
 
-    return {
+    const G: GameState = {
       phase_number: 1,
       current_day: 1,
       total_days: 5,
@@ -108,11 +146,17 @@ export const EnergyGame = {
       conducts: generateMockConducts(),
       action_cards,
       played_cards: [],
+      active_modifiers: {},
       weather_data,
+      modified_weather_data: weather_data,
       current_date,
       pipes,
       phase_deadline: null,
+      resolution_log: [],
     };
+
+    applyModifiersToState(G);
+    return G;
   },
 
   phases: {
@@ -139,7 +183,7 @@ export const EnergyGame = {
           });
           contract.bids = [];
         });
-        G.ready_players = []; // Extra safety
+        G.ready_players = [];
       }
     },
 
@@ -153,13 +197,52 @@ export const EnergyGame = {
         if (G.current_period < 3) {
           G.current_period++;
         }
-        G.ready_players = []; // Extra safety
+        G.ready_players = [];
       },
     },
 
     resolution: {
       onBegin: ({ G }) => {
         G.ready_players = [];
+        G.resolution_log = [];
+
+        // 1. Resolve Weather Votes
+        const votesByCountry: Record<string, ActionCardInstance[]> = {};
+        G.played_cards.forEach(pc => {
+          if (pc.target_country && WEATHER_CARD_TYPES.includes(pc.card.type)) {
+            if (!votesByCountry[pc.target_country]) votesByCountry[pc.target_country] = [];
+            votesByCountry[pc.target_country].push(pc.card);
+          }
+        });
+
+        Object.entries(votesByCountry).forEach(([country, cards]) => {
+          const winningCard = cards[Math.floor(Math.random() * cards.length)];
+          const newModifier: ActiveModifier = {
+            type: winningCard.type,
+            remaining_days: winningCard.duration,
+            original_duration: winningCard.duration
+          };
+          G.active_modifiers[country] = [newModifier];
+          G.resolution_log.push(`${country} hit by ${winningCard.type} for ${winningCard.duration} days!`);
+        });
+
+        // 2. Decrement and clean up active modifiers
+        Object.keys(G.active_modifiers).forEach(country => {
+          G.active_modifiers[country] = G.active_modifiers[country].filter(mod => {
+            mod.remaining_days--;
+            if (mod.remaining_days <= 0) {
+              G.resolution_log.push(`${mod.type} in ${country} has expired.`);
+              return false;
+            }
+            return true;
+          });
+          if (G.active_modifiers[country].length === 0) {
+            delete G.active_modifiers[country];
+          }
+        });
+
+        G.played_cards = [];
+        applyModifiersToState(G);
       },
       endIf: ({ G, ctx }) => G.ready_players.length >= ctx.numPlayers,
       next: "bidding",
@@ -171,9 +254,10 @@ export const EnergyGame = {
           if (typeof window === 'undefined') {
             G.weather_data = weatherReader.loadWeatherForDate(G.current_date);
           }
+          applyModifiersToState(G);
         }
         G.phase_number++;
-        G.ready_players = []; // Extra safety
+        G.ready_players = [];
       },
     },
   },
@@ -191,11 +275,11 @@ export const EnergyGame = {
       const cardIndex = playerCards.findIndex((c) => c.card_id === cardId);
       if (cardIndex === -1) return INVALID_MOVE;
       const [card] = playerCards.splice(cardIndex, 1);
+      
       G.played_cards.push({
         player_id: playerID,
         card: { ...card, face_down: !!faceDown },
         target_country: targetCountryId,
-        rounds_remaining: 3,
       });
     },
     buyActionCard: ({ G, playerID }) => {
@@ -204,8 +288,9 @@ export const EnergyGame = {
       G.player_balances[playerID] -= COST;
       G.action_cards[playerID].push({
         card_id: `card-${playerID}-${Date.now()}`,
-        type: ACTION_CARD_TYPES[Math.floor(Math.random() * ACTION_CARD_TYPES.length)],
+        type: ALL_CARD_TYPES[Math.floor(Math.random() * ALL_CARD_TYPES.length)],
         face_down: false,
+        duration: Math.floor(Math.random() * 3) + 2,
       });
     },
     markReady: ({ G, playerID }) => {
