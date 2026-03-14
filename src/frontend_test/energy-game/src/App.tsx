@@ -19,6 +19,7 @@ const EnergyClient = Client({
 
 const App = () => {
   const [gameConfig, setGameConfig] = useState<{
+    matchID: string;
     playerID: string;
     credentials: string;
   } | null>(null);
@@ -29,7 +30,7 @@ const App = () => {
         <Login 
           lobbyClient={lobbyClient} 
           gameName="energy-market"
-          onJoin={(id, creds) => setGameConfig({ playerID: id, credentials: creds })} 
+          onJoin={(matchID, id, creds) => setGameConfig({ matchID, playerID: id, credentials: creds })} 
         />
       </div>
     );
@@ -37,8 +38,9 @@ const App = () => {
 
   return (
     <div className="app">
-      {/* Pass both playerID AND credentials to the client */}
+      {/* CRITICAL: Pass matchID, playerID AND credentials */}
       <EnergyClient 
+        matchID={gameConfig.matchID}
         playerID={gameConfig.playerID} 
         credentials={gameConfig.credentials} 
       />
