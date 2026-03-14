@@ -6,18 +6,26 @@ interface ContractListProps {
   contracts?: Record<string, Contract>;
   title?: string;
   onBid?: (tradeId: string, price: number, volume: number) => void;
+  disabled?: boolean;
 }
 
 export const ContractList: React.FC<ContractListProps> = ({ 
   contracts = {}, 
   title = "Available Contracts",
-  onBid
+  onBid,
+  disabled = false
 }) => {
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const contractCount = Object.keys(contracts).length;
 
   return (
-    <div className="contract-list" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className={`contract-list ${disabled ? 'disabled-phase' : ''}`} style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: '100%',
+      opacity: disabled ? 0.6 : 1,
+      pointerEvents: disabled ? 'none' : 'auto'
+    }}>
       <div className="pane-header">
         <span>{title}</span>
         <span className="mono">{contractCount} ITEMS</span>
@@ -59,6 +67,7 @@ export const ContractList: React.FC<ContractListProps> = ({
               </div>
               <button 
                 className="mono"
+                disabled={disabled}
                 onClick={() => setSelectedContract(contract)}
                 style={{
                   width: '100%',
@@ -68,7 +77,7 @@ export const ContractList: React.FC<ContractListProps> = ({
                   border: '1px solid var(--border-color)',
                   color: 'var(--color-wind)',
                   fontSize: '0.7rem',
-                  cursor: 'pointer',
+                  cursor: disabled ? 'not-allowed' : 'pointer',
                   textTransform: 'uppercase'
                 }}
               >
@@ -93,4 +102,3 @@ export const ContractList: React.FC<ContractListProps> = ({
     </div>
   );
 };
-

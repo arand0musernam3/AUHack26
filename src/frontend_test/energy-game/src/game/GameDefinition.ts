@@ -208,8 +208,11 @@ export const EnergyGame = {
       });
     },
     markReady: ({ G, playerID }) => {
-      if (!G.ready_players.includes(playerID)) {
+      const index = G.ready_players.indexOf(playerID);
+      if (index === -1) {
         G.ready_players.push(playerID);
+      } else {
+        G.ready_players.splice(index, 1);
       }
     },
   },

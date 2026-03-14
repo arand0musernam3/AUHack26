@@ -5,11 +5,23 @@ interface PortfolioTabProps {
   G: GameState;
   playerID: string;
   ctx: any;
+  onPlayCard?: (cardId: string, target?: string, faceDown?: boolean) => void;
+  onBuyCard?: () => void;
+  disabled?: boolean;
 }
 
-export const PortfolioTab: React.FC<PortfolioTabProps> = ({ G, playerID, ctx }) => {
+export const PortfolioTab: React.FC<PortfolioTabProps> = ({ 
+  G, 
+  playerID, 
+  ctx,
+  onPlayCard,
+  onBuyCard,
+  disabled = false
+}) => {
   const contracts = G.contracts || {};
-  const isBiddingPhase = ctx?.phase === 'bidding';
+  const currentPhase = ctx?.phase;
+  const isBiddingPhase = currentPhase === 'bidding';
+  const isActionPhase = currentPhase === 'actionDeployment';
   
   // Find all bids placed by the current player
   const myBids = Object.values(contracts).flatMap(contract => 
@@ -31,17 +43,89 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({ G, playerID, ctx }) 
     });
   });
 
+  const myActionCards = G.action_cards?.[playerID] || [];
+
   return (
-    <div className="tab-content" style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+    <div className="tab-content" style={{ 
+      padding: '20px', 
+      overflowY: 'auto', 
+      flex: 1
+    }}>
+      {/* ACTION CARDS SECTION */}
       <div className="pane-header" style={{ background: 'transparent', padding: '0 0 15px 0', borderBottom: '1px solid var(--border-color)', marginBottom: '15px' }}>
-        <span>My Active Bids</span>
+        <span>OPERATOR ARSENAL</span>
+        <span className="mono">{myActionCards.length} CARDS</span>
+      </div>
+
+      <div style={{ marginBottom: '25px' }}>
+        {/* BUYING: Let them buy anytime except resolution */}
+        <button 
+          onClick={onBuyCard}
+          disabled={currentPhase === 'resolution' || G.player_balances[playerID] < 5000}
+          style={{
+            width: '100%',
+            padding: '10px',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px dashed var(--border-color)',
+            color: 'var(--text-main)',
+            cursor: (currentPhase === 'resolution' || G.player_balances[playerID] < 5000) ? 'not-allowed' : 'pointer',
+            marginBottom: '15px',
+            fontSize: '0.75rem'
+          }}
+        >
+          ACQUIRE INTEL CARD (5,000 €)
+        </button>
+
+        {myActionCards.length === 0 ? (
+          <div className="placeholder" style={{ textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>
+            No action cards available.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            {myActionCards.map(card => (
+              <div 
+                key={card.card_id}
+                style={{
+                  border: '1px solid var(--border-color)',
+                  padding: '10px',
+                  background: 'rgba(255,255,255,0.02)',
+                  fontSize: '0.7rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  opacity: isActionPhase ? 1 : 0.6
+                }}
+              >
+                <div className="mono" style={{ color: 'var(--color-solar)' }}>{card.type.replace('_', ' ')}</div>
+                <button 
+                  disabled={!isActionPhase}
+                  onClick={() => onPlayCard?.(card.card_id)}
+                  style={{
+                    padding: '5px',
+                    background: isActionPhase ? 'var(--color-solar)' : 'transparent',
+                    color: isActionPhase ? 'black' : 'var(--text-dim)',
+                    border: isActionPhase ? 'none' : '1px solid var(--border-color)',
+                    cursor: isActionPhase ? 'pointer' : 'not-allowed',
+                    fontSize: '0.65rem',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  DEPLOY
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="pane-header" style={{ background: 'transparent', padding: '0 0 15px 0', borderBottom: '1px solid var(--border-color)', marginBottom: '15px' }}>
+        <span>MY ACTIVE BIDS</span>
         <span className="mono">{myBids.length} BIDS</span>
       </div>
 
       {myBids.length === 0 ? (
         <div className="placeholder" style={{ padding: '20px 0', textAlign: 'center', opacity: 0.6 }}>
-          No active energy bids found.<br />
-          <small>Win bids in the Market phase to acquire contracts.</small>
+          No active energy bids found.
         </div>
       ) : (
         <div className="bid-list">
@@ -89,7 +173,7 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({ G, playerID, ctx }) 
       )}
 
       <div className='pane-header' style={{ background: 'transparent', padding: '20px 0 15px 0', borderBottom: '1px solid var(--border-color)', marginBottom: '15px', marginTop: '10px' }}>
-        <span>Other Operators' Bids</span>
+        <span>OTHER OPERATORS' BIDS</span>
       </div>
 
       {Object.keys(otherBidsByPlayer).length === 0 ? (
@@ -129,13 +213,6 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({ G, playerID, ctx }) 
           </div>
         ))
       )}
-
-      <div className='pane-header' style={{ background: 'transparent', padding: '20px 0 15px 0', borderBottom: '1px solid var(--border-color)', marginBottom: '15px', marginTop: '10px' }}>
-        <span>Owned Portfolio</span>
-      </div>
-      <div className="placeholder" style={{ padding: '20px 0', textAlign: 'center', opacity: 0.6 }}>
-        No settled contracts in your current portfolio.
-      </div>
     </div>
   );
 };

@@ -54,66 +54,79 @@ body {
   gap: 40px;
 }
 
-.status-label {
-  color: var(--text-dim);
-  font-size: 0.75rem;
-  margin-right: 10px;
+.game-stats {
+  display: flex;
+  gap: 20px;
 }
 
-.phase-value {
-  color: var(--color-wind);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.timer-container {
+.stat-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
-.timer-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.7rem;
+.stat-item .label {
+  font-size: 0.65rem;
   color: var(--text-dim);
+  font-family: var(--font-data);
 }
 
-.timer-bar-bg {
-  height: 4px;
-  background: #1e2a38;
-  border-radius: 2px;
-  overflow: hidden;
+.stat-item .value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: var(--font-data);
 }
 
-.timer-bar-fill {
-  height: 100%;
-  background: var(--color-wind);
-  transition: width 1s linear, background 0.3s ease;
+.phase-info {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.timer-bar-fill.warning {
-  background: #ff0055;
-  box-shadow: 0 0 10px #ff0055;
+.phase-title {
+  margin: 0;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  color: var(--color-wind);
+  font-family: var(--font-data);
 }
 
-.ready-btn {
+.ready-button {
   width: 100%;
-  padding: 8px;
-  font-size: 0.8rem;
-  letter-spacing: 1px;
+  padding: 10px;
   background: transparent;
   border: 1px solid var(--border-color);
   color: var(--text-main);
+  font-family: var(--font-data);
+  font-size: 0.8rem;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
-.ready-btn.active {
+.ready-button:hover:not(:disabled) {
+  background: rgba(255,255,255,0.05);
+}
+
+.ready-button.is-ready {
   background: var(--color-wind);
   color: var(--bg-dark);
   border-color: var(--color-wind);
   box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+}
+
+.phase-restriction-notice {
+  background: rgba(255, 87, 34, 0.1);
+  color: var(--color-fossil);
+  padding: 10px;
+  font-size: 0.75rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 87, 34, 0.2);
+  font-family: var(--font-data);
+}
+
+.disabled-phase {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .game-layout {
@@ -140,6 +153,52 @@ body {
   overflow: hidden;
 }
 
+.side-nav {
+  display: flex;
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.side-nav button {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border-color);
+  color: var(--text-dim);
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.side-nav button:last-child {
+  border-right: none;
+}
+
+.side-nav button.active {
+  color: var(--color-wind);
+  background: var(--bg-card);
+  box-shadow: inset 0 -2px 0 var(--color-wind);
+}
+
+.side-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-pane {
+  display: none;
+  height: 100%;
+  flex-direction: column;
+}
+
+.tab-pane.active {
+  display: flex;
+}
+
 .pane-header {
   padding: 15px 20px;
   border-bottom: 1px solid var(--border-color);
@@ -151,47 +210,25 @@ body {
   justify-content: space-between;
   align-items: center;
   background: rgba(0,0,0,0.2);
-}
-
-/* Tabs */
-.tabs-header {
-  display: flex;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-dark);
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 12px;
-  background: transparent;
-  border: none;
-  border-right: 1px solid var(--border-color);
-  color: var(--text-dim);
   font-family: var(--font-data);
-  font-size: 0.75rem;
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: all 0.2s ease;
 }
 
-.tab-btn:last-child {
-  border-right: none;
+.contract-card {
+  border: 1px solid var(--border-color);
+  background: rgba(255,255,255,0.02);
+  margin-bottom: 15px;
+  padding: 15px;
+  position: relative;
 }
 
-.tab-btn.active {
-  color: var(--color-wind);
-  background: var(--bg-card);
-  box-shadow: inset 0 -2px 0 var(--color-wind);
+.placeholder {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-dim);
+  font-style: italic;
+  font-size: 0.9rem;
 }
 
-.tab-content {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -201,15 +238,4 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--border-color);
   border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-dim);
-}
-
-.placeholder {
-  padding: 40px;
-  text-align: center;
-  color: var(--text-dim);
-  font-style: italic;
-  font-size: 0.9rem;
 }

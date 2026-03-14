@@ -19,44 +19,56 @@ export const PhaseHeader: React.FC<PhaseHeaderProps> = ({
   currentPeriod
 }) => {
   const getPhaseName = (p: string | null) => {
-    if (!p) return 'INITIALIZING...';
+    if (!p) return "TRANSITIONING...";
     switch (p) {
-      case 'bidding': return 'AUCTION & CONTRACTS';
-      case 'actionDeployment': return 'OPERATOR ACTIONS';
-      case 'resolution': return 'DAY END RESOLUTION';
+      case 'bidding': return 'AUCTION PHASE';
+      case 'actionDeployment': return 'ACTION PHASE';
+      case 'resolution': return 'DAY SUMMARY';
       default: return p.toUpperCase();
     }
   };
 
+  // 5m (300s) for bidding, 2m (120s) for action, 1m (60s) for resolution
+  const getPhaseDuration = (p: string | null) => {
+    if (p === 'bidding') return 300;
+    if (p === 'actionDeployment') return 120;
+    return 60;
+  };
+
+  const phaseName = getPhaseName(phase);
+  const duration = getPhaseDuration(phase);
+
   return (
-    <div className="phase-header">
-      <div className="phase-info" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-        <div>
-          <span className="mono status-label">DAY:</span>
-          <span className="mono phase-value" style={{ color: 'var(--color-solar)' }}>{currentDay}</span>
+    <header className="phase-header">
+      <div className="game-stats">
+        <div className="stat-item">
+          <span className="label">DAY</span>
+          <span className="value">{currentDay}</span>
         </div>
-        <div>
-          <span className="mono status-label">ROUND:</span>
-          <span className="mono phase-value" style={{ color: 'var(--color-solar)' }}>{currentPeriod}/3</span>
+        <div className="stat-item">
+          <span className="label">ROUND</span>
+          <span className="value">{currentPeriod}/3</span>
         </div>
-        <div style={{ marginLeft: '10px', borderLeft: '1px solid #333', paddingLeft: '20px' }}>
-          <span className="mono status-label">PHASE:</span>
-          <span className="mono phase-value">{getPhaseName(phase)}</span>
-        </div>
-      </div>
-      
-      <div className="timer-section">
-        <Timer key={`${phase}-${currentDay}-${currentPeriod}`} duration={30} onExpiry={onTimerExpiry} />
       </div>
 
-      <div className="ready-section">
+      <div className="phase-info">
+        <h1 className="phase-title">{phaseName}</h1>
+        {/* Key forces timer reset on phase change */}
+        <Timer 
+          key={`${phase}-${currentDay}-${currentPeriod}`}
+          initialSeconds={duration} 
+          onExpiry={onTimerExpiry} 
+        />
+      </div>
+
+      <div className="phase-actions">
         <button 
-          className={`ready-btn ${isReady ? 'active' : ''}`} 
+          className={`ready-button ${isReady ? 'is-ready' : ''}`}
           onClick={onReadyClick}
         >
-          {isReady ? 'AWAITING OTHERS...' : 'MARK AS READY'}
+          {isReady ? 'READY ✓' : 'MARK READY'}
         </button>
       </div>
-    </div>
+    </header>
   );
 };

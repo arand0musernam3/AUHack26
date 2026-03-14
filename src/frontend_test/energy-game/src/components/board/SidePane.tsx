@@ -1,88 +1,98 @@
 import React, { useState } from 'react';
-import { ContractList } from '../contracts/ContractList';
+import type { GameState } from '../../game/types';
 import { PortfolioTab } from './PortfolioTab';
 import { OperatorTab } from './OperatorTab';
-import type { GameState } from '../../game/types';
+import { ContractList } from '../contracts/ContractList';
 
 interface SidePaneProps {
   G: GameState;
   ctx: any;
   playerID: string;
-  moves: {
-    submitBid: (tradeId: string, price: number, volume: number) => void;
-    playActionCard: (cardId: string, target?: string, faceDown?: boolean) => void;
-    routeEnergy: (contractId: string, route: any[]) => void;
-    buyActionCard: () => void;
-    markReady: () => void;
-  };
+  moves: any;
 }
 
-type TabType = 'market' | 'portfolio' | 'operator';
-
 export const SidePane: React.FC<SidePaneProps> = ({ G, ctx, playerID, moves }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('market');
-
-  console.log(G.action_cards);
-  const playerBalances = G.player_balances || {};
-  const readyPlayers = G.ready_players || [];
-  const actionCards = G.action_cards ? G.action_cards[playerID] : [];
+  const [activeTab, setActiveTab] = useState<'contracts' | 'portfolio' | 'operators'>('contracts');
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'market':
+      case 'contracts':
         return (
-          <ContractList 
-            contracts={G.contracts} 
-            title="Market Terminal" 
-            onBid={(tradeId, price, volume) => moves.submitBid(tradeId, price, volume)}
-          />
+          <div className="tab-pane active">
+            {ctx.phase !== 'bidding' && (
+              <div className="phase-restriction-notice">
+                Bidding is only allowed during the AUCTION phase.
+              </div>
+            )}
+            <ContractList 
+              contracts={G.contracts} 
+              onBid={(id, price, vol) => moves.submitBid(id, price, vol)}
+              disabled={ctx.phase !== 'bidding'}
+            />
+          </div>
         );
       case 'portfolio':
-        return <PortfolioTab G={G} playerID={playerID} ctx={ctx} />;
-      case 'operator':
         return (
-          <OperatorTab 
-            playerID={playerID}
-            playerBalances={playerBalances}
-            playerNames={G.player_names || {}}
-            readyPlayers={readyPlayers}
-            actionCards={actionCards || []}
-            onBuyCard={() => moves.buyActionCard()}
-            onDeployCard={(cardId) => moves.playActionCard(cardId)}
-            ctx={ctx}
-          />
+          <div className="tab-pane active">
+             {ctx.phase !== 'actionDeployment' && (
+              <div className="phase-restriction-notice">
+                Actions can only be deployed during the ACTION phase.
+              </div>
+            )}
+            <PortfolioTab 
+              G={G} 
+              playerID={playerID} 
+              ctx={ctx}
+              onPlayCard={(id, target, faceDown) => moves.playActionCard(id, target, faceDown)}
+              onBuyCard={() => moves.buyActionCard()}
+              disabled={ctx.phase !== 'actionDeployment'}
+            />
+          </div>
         );
-      default:
-        return null;
+      case 'operators':
+        return (
+          <div className="tab-pane active">
+            <OperatorTab 
+              playerID={playerID}
+              playerBalances={G.player_balances}
+              playerNames={G.player_names}
+              readyPlayers={G.ready_players}
+              actionCards={G.action_cards[playerID] || []}
+              onBuyCard={() => moves.buyActionCard()}
+              onDeployCard={(id) => moves.playActionCard(id)}
+              ctx={ctx}
+            />
+          </div>
+        );
     }
   };
 
   return (
-    <section className="side-pane">
-      <nav className="tabs-header">
+    <aside className="side-pane">
+      <nav className="side-nav">
         <button 
-          className={`tab-btn ${activeTab === 'market' ? 'active' : ''}`} 
-          onClick={() => setActiveTab('market')}
+          className={activeTab === 'contracts' ? 'active' : ''} 
+          onClick={() => setActiveTab('contracts')}
         >
-          Market
+          CONTRACTS
         </button>
         <button 
-          className={`tab-btn ${activeTab === 'portfolio' ? 'active' : ''}`} 
+          className={activeTab === 'portfolio' ? 'active' : ''} 
           onClick={() => setActiveTab('portfolio')}
         >
-          Portfolio
+          PORTFOLIO
         </button>
         <button 
-          className={`tab-btn ${activeTab === 'operator' ? 'active' : ''}`} 
-          onClick={() => setActiveTab('operator')}
+          className={activeTab === 'operators' ? 'active' : ''} 
+          onClick={() => setActiveTab('operators')}
         >
-          Operator
+          OPERATORS
         </button>
       </nav>
-      
-      <div className="tab-content" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+
+      <div className="side-content">
         {renderTabContent()}
       </div>
-    </section>
+    </aside>
   );
 };
