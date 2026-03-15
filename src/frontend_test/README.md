@@ -53,8 +53,7 @@ Cards are your primary way to manipulate the market. You can acquire "Intel Card
 
 ---
 
-## 🧪 THE "UNDER THE HOOD" MATH
-Behind the "vibe coding" lies a deterministic engine:
+## 🧪 THE CALCULATIONS
 
 ### Market Price Calculation
 The settlement price is derived from real European energy datasets (Generation, Load, Weather) and adjusted by a linear pricing model:
