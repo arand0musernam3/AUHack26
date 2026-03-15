@@ -49,7 +49,7 @@
 }
 
 /* boardgame.io Lobby CSS Overrides */
-.bgio-lobby {
+#lobby-view {
   width: 100%;
   max-width: 1000px;
   background: var(--bg-card);
@@ -60,7 +60,7 @@
 }
 
 /* Align buttons horizontally in the room list and other areas */
-.bgio-lobby button {
+#lobby-view button, #lobby-view select, #lobby-view input {
   font-family: var(--font-data);
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -73,21 +73,15 @@
   margin: 0 5px;
 }
 
-.bgio-lobby button:hover:not(:disabled) {
+#lobby-view button:hover:not(:disabled) {
   background: var(--color-wind);
   color: var(--bg-dark);
 }
 
-.bgio-lobby button:disabled {
+#lobby-view button:disabled {
   border-color: var(--border-color);
   color: var(--text-dim);
   cursor: not-allowed;
-}
-
-/* Horizontal alignment for action buttons inside the lobby list */
-.bgio-lobby-room-list td:last-child {
-  display: flex;
-  gap: 10px;
 }
 
 /* Make inputs look consistent */
@@ -100,7 +94,7 @@
   margin: 0 5px;
 }
 
-.bgio-lobby input:focus {
+#lobby-view input:focus {
   border-color: var(--color-wind);
   outline: none;
 }
@@ -113,6 +107,16 @@
   height: 100vh;
   z-index: 9999;
   background: var(--bg-dark);
+}
+
+/* single buttons to exit match and lobby */
+#lobby-exit {
+  display: none;
+}
+
+#match-creation > * {
+  display: inline-block;
+  margin: 0 5px;
 }
 
 /* Fix table layout for horizontal room buttons */
