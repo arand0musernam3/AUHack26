@@ -336,8 +336,9 @@ export const EnergyGame = {
 
         G.positions.forEach(pos => {
           if (pos.delivery_day === G.current_day) {
-            const countryWeather = G.weather_data[pos.origin_country];
-            let marketPrice = pos.base_price;
+            const countryWeather = G.modified_weather_data[pos.origin_country];
+            // let marketPrice = pos.base_price;
+            let marketPrice = countryWeather.current.Price; // Start with weather-influenced price
             
             if (countryWeather && countryWeather.current.consumption && countryWeather.current.generation) {
               const load = countryWeather.current.consumption;
@@ -365,7 +366,7 @@ export const EnergyGame = {
             } else {
               profit = (marketPrice - pos.bid_price) * pos.volume;
             }
-            
+            console.log(`  Profit/Loss for this position: ${profit.toFixed(2)}`);
             G.player_balances[pos.player_id] += (pos.bid_price * pos.volume) + profit;
           }
         });

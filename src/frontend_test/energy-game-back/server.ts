@@ -10,6 +10,7 @@ const server = Server({
     Origins.LOCALHOST,
     "http://localhost:5173",
     "http://10.192.50.21:5173",
+    "http://10.192.41.190:5173",
     // Production — replace with your deployed frontend URL
     'https://your-game-frontend.com',
   ],
