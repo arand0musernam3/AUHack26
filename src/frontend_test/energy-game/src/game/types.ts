@@ -129,6 +129,7 @@ export interface GameState {
   active_countries: string[];
   positions: Position[];
   resolution_log: string[];
+  is_game_over?: boolean;
 }
 
 export interface RouteStep {

@@ -140,6 +140,58 @@ export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => 
           </div>
         </div>
       )}
+
+      {ctx.gameover && (
+        <div className="resolution-overlay game-over-overlay">
+          <h1 className="mono" style={{ textAlign: 'center', color: 'var(--color-solar)', fontSize: '2.5rem' }}>GAME OVER</h1>
+          <h2 className="mono" style={{ textAlign: 'center', color: 'var(--text-main)', marginBottom: '30px' }}>FINAL MARKET LEADERBOARD</h2>
+          
+          <div className="leaderboard-container mono" style={{ width: '100%', maxWidth: '600px', margin: '0 auto' }}>
+            {ctx.gameover.leaderboard.map((entry: any, i: number) => (
+              <div key={i} className={`leaderboard-entry ${i === 0 ? 'winner' : ''}`} style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '15px',
+                background: i === 0 ? 'rgba(255, 179, 0, 0.15)' : 'rgba(255,255,255,0.03)',
+                border: i === 0 ? '1px solid var(--color-solar)' : '1px solid rgba(255,255,255,0.1)',
+                marginBottom: '10px',
+                borderRadius: '4px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <span style={{ fontSize: '1.2rem', color: i === 0 ? 'var(--color-solar)' : 'var(--text-dim)' }}>#{i + 1}</span>
+                  <span style={{ fontSize: '1.1rem' }}>{entry.name}</span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '1.2rem', color: 'var(--color-wind)' }}>€{Math.round(entry.score).toLocaleString()}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: '40px' }}>
+            <button 
+              className="ready-button"
+              onClick={() => {
+                // Clear any stored match credentials to avoid "already joined" errors on new matches
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  if (key && (key.includes('matchID') || key.includes('credentials') || key.includes('playerID'))) {
+                    keysToRemove.push(key);
+                  }
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                
+                // Redirect to base URL to return to the lobby list
+                window.location.href = window.location.origin + window.location.pathname;
+              }}
+              style={{ width: '300px', background: 'var(--color-solar)', color: '#000' }}
+            >
+              EXIT TO LOBBY
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

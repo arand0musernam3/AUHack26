@@ -430,11 +430,31 @@ export const EnergyGame = {
               }
             }
           }
+        } else {
+           // It's the last day (Day 5)
+           if (G.current_period === 3) {
+             G.is_game_over = true;
+           }
         }
         G.phase_number++;
         G.ready_players = [];
       },
     },
+  },
+
+  endIf: ({ G }) => {
+    if (G.is_game_over) {
+      const scores = Object.keys(G.player_balances).map(id => ({
+        playerID: id,
+        name: G.player_names[id],
+        score: G.player_balances[id]
+      })).sort((a, b) => b.score - a.score);
+      
+      return { 
+        winner: scores[0].playerID,
+        leaderboard: scores
+      };
+    }
   },
 
   moves: {
