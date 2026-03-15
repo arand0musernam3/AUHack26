@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { EuropeMap } from '../map/EuropeMap';
-import type { CountryWeatherData, ActiveModifier, PlayedCard, Pipe, ActivePipeModifier, WeatherDataPoint } from '../../game/types';
+import type { CountryWeatherData, ActiveModifier, PlayedCard, Pipe, ActivePipeModifier } from '../../game/types';
 
 interface MapPaneProps {
   weather_data: CountryWeatherData;
@@ -15,83 +15,65 @@ interface MapPaneProps {
   targetingType?: 'country' | 'pipe';
 }
 
-const getCountryId = (name: string): string => {
-  const mapping: Record<string, string> = {
-    'Germany': 'DE', 'France': 'FR', 'Spain': 'ES', 'Portugal': 'PT', 'Italy': 'IT',
-    'Netherlands': 'NL', 'Belgium': 'BE', 'Denmark': 'DK', 'Norway': 'NO', 
-    'Sweden': 'SE', 'Finland': 'FI', 'Poland': 'PL', 'Czechia': 'CZ', 
-    'Austria': 'AT', 'Switzerland': 'CH'
-  };
-  return mapping[name] || name;
+const MAPPING: Record<string, string> = {
+  Germany: 'DE', France: 'FR', Spain: 'ES', Portugal: 'PT', Italy: 'IT',
+  Netherlands: 'NL', Belgium: 'BE', Denmark: 'DK', Norway: 'NO', 
+  Sweden: 'SE', Finland: 'FI', Poland: 'PL', Czechia: 'CZ', 
+  Austria: 'AT', Switzerland: 'CH'
 };
 
-// Deterministic-ish noise based on day and country to avoid flickering on every render
-const getNoisyValue = (val: number, dayOffset: number, countryId: string) => {
-  const noiseMap = [0.05, 0.10, 0.15];
-  const maxNoise = noiseMap[dayOffset] || 0.05;
-  // Use a simple seed from countryId and dayOffset for stability
-  const seed = countryId.charCodeAt(0) + dayOffset;
-  const pseudoRandom = (Math.sin(seed) + 1) / 2; // 0 to 1
-  const multiplier = 1 + (pseudoRandom * (maxNoise * 2) - maxNoise);
-  return val * multiplier;
+const getNoisy = (val: number, offset: number, id: string) => {
+  const seed = id.charCodeAt(0) + offset;
+  const pseudo = (Math.sin(seed) + 1) / 2;
+  const noise = [0.05, 0.1, 0.15][offset] || 0.05;
+  return val * (1 + (pseudo * (noise * 2) - noise));
 };
 
 export const MapPane: React.FC<MapPaneProps> = ({ 
-  weather_data, 
-  current_date, 
-  pipes,
-  onCountryClick,
-  onPipeClick,
-  activeModifiers = {},
-  activePipeModifiers = [],
-  pendingPlays = [],
-  isTargeting = false,
-  targetingType = 'country'
+  weather_data, current_date, pipes, onCountryClick, onPipeClick,
+  activeModifiers = {}, activePipeModifiers = [], pendingPlays = [],
+  isTargeting = false, targetingType = 'country'
 }) => {
-  const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
-  const [hoveredPipe, setHoveredPipe] = useState<Pipe | null>(null);
+  const [hoverC, setHoverC] = useState<string | null>(null);
+  const [hoverP, setHoverP] = useState<Pipe | null>(null);
 
-  const formatWeather = (countryName: string) => {
-    const entry = weather_data[countryName];
+  const renderCountryTooltip = (name: string) => {
+    const entry = weather_data[name];
     if (!entry) return null;
-    const data = entry.current;
-    const countryId = getCountryId(countryName);
-
-    const active = activeModifiers[countryId] || [];
-    const pending = pendingPlays.filter(p => p.target_country === countryId);
-
+    const d = entry.current;
+    const id = MAPPING[name] || name;
+    const mods = activeModifiers[id] || [];
+    const pending = pendingPlays.filter(p => p.target_country === id);
+    
     const cardCounts: Record<string, number> = {};
-    pending.forEach(p => {
-      cardCounts[p.card.type] = (cardCounts[p.card.type] || 0) + 1;
-    });
-    const totalPending = pending.length;
+    pending.forEach(p => cardCounts[p.card.type] = (cardCounts[p.card.type] || 0) + 1);
 
     return (
       <div className="country-tooltip mono" style={{ width: '300px', maxHeight: '80vh', overflowY: 'auto' }}>
         <div className="tooltip-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>{countryName.toUpperCase()} Terminal</span>
-          <span style={{ color: 'var(--text-dim)' }}>{countryId}</span>
+          <span>{name.toUpperCase()} Terminal</span>
+          <span style={{ color: 'var(--text-dim)' }}>{id}</span>
         </div>
         
         <div className="tooltip-section">
           <div className="tooltip-label">LIVE METRICS:</div>
           <div className="tooltip-grid">
-            <div className="stat">TEMP: {data.temperature.toFixed(1)}°C</div>
-            <div className="stat">WIND: {data.wind_speed.toFixed(1)} km/h</div>
-            <div className="stat">CLOU: {data.cloud_cover.toFixed(0)}%</div>
-            <div className="stat">PRIC: €{data.Price.toFixed(1)}</div>
+            <div className="stat">TEMP: {d.temperature.toFixed(1)}°C</div>
+            <div className="stat">WIND: {d.wind_speed.toFixed(1)} km/h</div>
+            <div className="stat">CLOU: {d.cloud_cover.toFixed(0)}%</div>
+            <div className="stat">PRIC: €{d.Price.toFixed(1)}</div>
           </div>
         </div>
 
         <div className="tooltip-section">
           <div className="tooltip-label">GENERATION MIX:</div>
           <div className="tooltip-grid" style={{ gridTemplateColumns: '1fr' }}>
-            {['Wind', 'Solar', 'Water', 'Fossil', 'Nuclear'].map(type => {
-              const val = (data as any)[type];
+            {['Wind', 'Solar', 'Water', 'Fossil', 'Nuclear'].map(t => {
+              const val = (d as any)[t];
               if (!val) return null;
               return (
-                <div key={type} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
-                  <span>{type.toUpperCase()}</span>
+                <div key={t} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
+                  <span>{t.toUpperCase()}</span>
                   <span>{Math.round(val).toLocaleString()} MW</span>
                 </div>
               );
@@ -99,22 +81,22 @@ export const MapPane: React.FC<MapPaneProps> = ({
           </div>
         </div>
 
-        {active.length > 0 && (
+        {mods.length > 0 && (
           <div className="tooltip-active">
             <div className="tooltip-label" style={{ color: 'var(--color-solar)' }}>ACTIVE MODIFIERS:</div>
-            {active.map((a, i) => (
-              <div key={i} style={{ fontSize: '0.65rem' }}>{a.type} ({a.remaining_days}d left)</div>
+            {mods.map((m, i) => (
+              <div key={i} style={{ fontSize: '0.65rem' }}>{m.type} ({m.remaining_days}d left)</div>
             ))}
           </div>
         )}
 
-        {totalPending > 0 && (
+        {pending.length > 0 && (
           <div className="tooltip-pending" style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #444' }}>
             <div className="tooltip-label" style={{ color: 'var(--color-wind)' }}>PENDING DEPLOYMENTS:</div>
             {Object.entries(cardCounts).map(([type, count]) => (
               <div key={type} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
                 <span>{type}</span>
-                <span>{((count / totalPending) * 100).toFixed(0)}% chance</span>
+                <span>{((count / pending.length) * 100).toFixed(0)}% chance</span>
               </div>
             ))}
           </div>
@@ -124,23 +106,18 @@ export const MapPane: React.FC<MapPaneProps> = ({
           <div className="tooltip-label">3-DAY STRATEGIC FORECAST:</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
             {entry.forecast.slice(0, 3).map((f, i) => {
-              const noisyPrice = getNoisyValue(f.Price, i, countryId);
-              
-              // Find top 3 energy sources for that day
+              const noisyPrice = getNoisy(f.Price, i, id);
               const types = ['Wind', 'Solar', 'Water', 'Fossil', 'Nuclear'];
-              const genData = types.map(t => ({ type: t, val: getNoisyValue((f as any)[t] || 0, i, countryId) }));
+              const genData = types.map(t => ({ type: t, val: getNoisy((f as any)[t] || 0, i, id) }));
               const totalGen = genData.reduce((acc, curr) => acc + curr.val, 0);
-              const top3 = genData
-                .sort((a, b) => b.val - a.val)
-                .slice(0, 3);
-
-              const noiseMapLabels = ["±5%", "±10%", "±15%"];
+              const top3 = genData.sort((a, b) => b.val - a.val).slice(0, 3);
+              const uncertainty = ["±5%", "±10%", "±15%"][i];
 
               return (
                 <div key={i} style={{ background: 'rgba(255,255,255,0.03)', padding: '6px', borderRadius: '2px' }}>
                   <div style={{ color: 'var(--color-wind)', fontSize: '0.65rem', marginBottom: '4px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between' }}>
                     <span>D+{i+1} PREDICTIONS</span>
-                    <span style={{ opacity: 0.6 }}>({noiseMapLabels[i]} UNCERTAINTY)</span>
+                    <span style={{ opacity: 0.6 }}>({uncertainty} UNCERTAINTY)</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', marginBottom: '4px' }}>
                     <span style={{ color: 'var(--text-dim)' }}>EST. PRICE:</span>
@@ -162,88 +139,48 @@ export const MapPane: React.FC<MapPaneProps> = ({
     );
   };
 
-  const formatPipeTooltip = (pipe: Pipe) => {
-    const hourlyCapacity = Math.round(pipe.capacity);
-    const transitCapacity = hourlyCapacity * 12;
-    
-    const activeBroken = activePipeModifiers.find(m => m.type === 'CUT_CONDUCT' && 
-      ((m.target.from === pipe.from && m.target.to === pipe.to) || (m.target.from === pipe.to && m.target.to === pipe.from)));
-    const activeDiscount = activePipeModifiers.find(m => m.type === 'DISCOUNT_CONDUCT' && 
-      ((m.target.from === pipe.from && m.target.to === pipe.to) || (m.target.from === pipe.to && m.target.to === pipe.from)));
-    const pending = pendingPlays.filter(p => p.target_pipe?.from === pipe.from && p.target_pipe?.to === pipe.to);
+  const renderPipeTooltip = (p: Pipe) => {
+    const broken = activePipeModifiers.find(m => m.type === 'CUT_CONDUCT' && 
+      ((m.target.from === p.from && m.target.to === p.to) || (m.target.from === p.to && m.target.to === p.from)));
+    const discount = activePipeModifiers.find(m => m.type === 'DISCOUNT_CONDUCT' && 
+      ((m.target.from === p.from && m.target.to === p.to) || (m.target.from === p.to && m.target.to === p.from)));
+    const pending = pendingPlays.filter(pl => pl.target_pipe?.from === p.from && pl.target_pipe?.to === p.to);
 
     return (
-      <div className="country-tooltip mono" style={{ border: activeBroken ? '1px solid var(--color-fossil)' : '1px solid var(--color-solar)', width: '240px' }}>
-        <div className="tooltip-header" style={{ color: activeBroken ? 'var(--color-fossil)' : 'var(--color-solar)', borderBottom: activeBroken ? '1px solid var(--color-fossil)' : '1px solid var(--color-solar)' }}>
-          PIPE TERMINAL {activeBroken ? '[OFFLINE]' : '[ONLINE]'}
+      <div className="country-tooltip mono" style={{ border: broken ? '1px solid var(--color-fossil)' : '1px solid var(--color-solar)', width: '240px' }}>
+        <div className="tooltip-header" style={{ color: broken ? 'var(--color-fossil)' : 'var(--color-solar)', borderBottom: '1px solid #444' }}>
+          PIPE TERMINAL {broken ? '[OFFLINE]' : '[ONLINE]'}
         </div>
-        <div style={{ fontSize: '0.75rem', marginBottom: '8px' }}>
-          {pipe.from} ⇹ {pipe.to}
-        </div>
+        <div style={{ fontSize: '0.75rem', marginBottom: '8px' }}>{p.from} ⇹ {p.to}</div>
         <div className="tooltip-grid" style={{ gridTemplateColumns: '1fr' }}>
-          <div className="stat" style={{ fontSize: '0.65rem' }}>
-            MAX FLOW: {hourlyCapacity.toLocaleString()} MW/h
-          </div>
-          <div className="stat" style={{ fontSize: '0.65rem', color: 'var(--color-solar)' }}>
-            TRANSIT CAP (12h): {transitCapacity.toLocaleString()} MW
-          </div>
+          <div className="stat" style={{ fontSize: '0.65rem' }}>MAX FLOW: {Math.round(p.capacity).toLocaleString()} MW/h</div>
+          <div className="stat" style={{ fontSize: '0.65rem', color: 'var(--color-solar)' }}>TRANSIT CAP (12h): {(Math.round(p.capacity) * 12).toLocaleString()} MW</div>
         </div>
-
-        {activeBroken && (
-          <div style={{ color: 'var(--color-fossil)', fontSize: '0.65rem', marginTop: '10px', fontWeight: 'bold' }}>
-            STATUS: SEVERED ({activeBroken.remaining_rounds} ROUNDS)
-          </div>
-        )}
-        {activeDiscount && (
-          <div style={{ color: 'var(--color-nuclear)', fontSize: '0.65rem', marginTop: '10px', fontWeight: 'bold' }}>
-            STATUS: DISCOUNTED ({activeDiscount.remaining_rounds} ROUNDS)
-          </div>
-        )}
-        
-        {pending.length > 0 && (
-          <div className="tooltip-pending" style={{ marginTop: '10px', color: 'var(--color-solar)', fontSize: '0.65rem' }}>
-            PENDING: {pending.map(p => p.card.type).join(', ')}
-          </div>
-        )}
+        {broken && <div style={{ color: 'var(--color-fossil)', fontSize: '0.65rem', marginTop: '10px', fontWeight: 'bold' }}>STATUS: SEVERED ({broken.remaining_rounds} ROUNDS)</div>}
+        {discount && <div style={{ color: 'var(--color-nuclear)', fontSize: '0.65rem', marginTop: '10px', fontWeight: 'bold' }}>STATUS: DISCOUNTED ({discount.remaining_rounds} ROUNDS)</div>}
+        {pending.length > 0 && <div className="tooltip-pending" style={{ marginTop: '10px', color: 'var(--color-solar)', fontSize: '0.65rem' }}>PENDING: {pending.map(pl => pl.card.type).join(', ')}</div>}
       </div>
     );
   };
 
-  const formattedDateTime = current_date.replace('T', ' ');
-
   return (
     <section className="map-pane">
       <div className="map-header pane-header">
-        <span className="mono">EUROPEAN GRID STATUS — {formattedDateTime}</span>
+        <span className="mono">EUROPEAN GRID STATUS — {current_date.replace('T', ' ')}</span>
         {isTargeting && <span className="targeting-pulse mono">SELECT {targetingType.toUpperCase()}</span>}
       </div>
       
       <div className="map-container" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         <EuropeMap 
-          weather_data={weather_data}
-          pipes={pipes}
-          onCountryClick={onCountryClick}
-          onCountryHover={setHoveredCountry}
-          onPipeHover={setHoveredPipe}
-          onPipeClick={onPipeClick}
-          activeModifiers={activeModifiers}
-          activePipeModifiers={activePipeModifiers}
-          pendingPlays={pendingPlays}
-          isTargeting={isTargeting}
-          targetingType={targetingType}
+          weather_data={weather_data} pipes={pipes}
+          onCountryClick={onCountryClick} onCountryHover={setHoverC}
+          onPipeHover={setHoverP} onPipeClick={onPipeClick}
+          activeModifiers={activeModifiers} activePipeModifiers={activePipeModifiers}
+          pendingPlays={pendingPlays} isTargeting={isTargeting} targetingType={targetingType}
         />
         
-        {hoveredCountry && (
-          <div style={{ position: 'absolute', top: '20px', left: '20px', pointerEvents: 'none', zIndex: 100 }}>
-            {formatWeather(hoveredCountry)}
-          </div>
-        )}
-
-        {hoveredPipe && (
-          <div style={{ position: 'absolute', top: '20px', right: '20px', pointerEvents: 'none', zIndex: 100 }}>
-            {formatPipeTooltip(hoveredPipe)}
-          </div>
-        )}
+        {hoverC && <div style={{ position: 'absolute', top: '20px', left: '20px', pointerEvents: 'none', zIndex: 100 }}>{renderCountryTooltip(hoverC)}</div>}
+        {hoverP && <div style={{ position: 'absolute', top: '20px', right: '20px', pointerEvents: 'none', zIndex: 100 }}>{renderPipeTooltip(hoverP)}</div>}
 
         <div className="map-legend mono">
           <div className="legend-section">
