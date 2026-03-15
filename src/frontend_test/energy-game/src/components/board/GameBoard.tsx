@@ -173,17 +173,11 @@ export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => 
               className="ready-button"
               onClick={() => {
                 // Clear any stored match credentials to avoid "already joined" errors on new matches
-                const keysToRemove = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                  const key = localStorage.key(i);
-                  if (key && (key.includes('matchID') || key.includes('credentials') || key.includes('playerID'))) {
-                    keysToRemove.push(key);
-                  }
-                }
-                keysToRemove.forEach(key => localStorage.removeItem(key));
+                localStorage.clear();
+                sessionStorage.clear();
                 
-                // Redirect to base URL to return to the lobby list
-                window.location.href = window.location.origin + window.location.pathname;
+                // Redirect to base URL using replace to avoid back-history issues
+                window.location.replace(window.location.origin + window.location.pathname);
               }}
               style={{ width: '300px', background: 'var(--color-solar)', color: '#000' }}
             >

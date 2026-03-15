@@ -129,6 +129,7 @@ export interface GameState {
   active_countries: string[];
   positions: Position[];
   resolution_log: string[];
+  auction_results: string[];
   is_game_over?: boolean;
 }
 

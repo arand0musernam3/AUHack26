@@ -199,6 +199,7 @@ export const EnergyGame = {
       active_countries: final_active_countries,
       positions: [],
       resolution_log: [],
+      auction_results: [],
     };
 
     applyModifiersToState(G);
@@ -218,6 +219,11 @@ export const EnergyGame = {
           const contract = G.contracts[id];
           // Process if there are bids, regardless of delivery day
           if (contract.bids.length > 0) {
+            // Log the auction attempt
+            const bidSummary = contract.bids.map(b => `${G.player_names[b.player_id] || b.player_id}: €${b.price}`).join(", ");
+            G.auction_results.push(`AUCTION: ${contract.origin_country} ${contract.energy_type} (Delivery Day ${contract.delivery_day})`);
+            G.auction_results.push(`  BIDS: ${bidSummary}`);
+
             // consider negative bids if they are shorting
             const maxPrice = Math.max(...contract.bids.map(b => Math.abs(b.price)));
             const winners = contract.bids.filter(b => Math.abs(b.price) === maxPrice);
@@ -240,6 +246,9 @@ export const EnergyGame = {
                   delivery_day: contract.delivery_day,
                   period_placed: G.current_period
                 });
+                G.auction_results.push(`  WINNER: ${G.player_names[bid.player_id] || bid.player_id} acquired ${volPerWinner.toFixed(0)} MWh @ €${maxPrice}`);
+              } else {
+                G.auction_results.push(`  FAILED: ${G.player_names[bid.player_id] || bid.player_id} insufficient funds for €${cost.toFixed(0)}`);
               }
             });
             // Contract was auctioned, remove it
@@ -268,8 +277,10 @@ export const EnergyGame = {
     resolution: {
       onBegin: ({ G }) => {
         G.ready_players = [];
-        G.resolution_log = [];
-
+        
+        // Prepare the resolution report
+        G.resolution_log = [...G.auction_results];
+        
         // 1. Resolve Weather & Price Votes (PROPORTIONAL)
         const countryVotes: Record<string, ActionCardInstance[]> = {};
         G.played_cards.forEach(pc => {
@@ -286,6 +297,7 @@ export const EnergyGame = {
             remaining_days: winningCard.duration,
             original_duration: winningCard.duration
           };
+          // For weather/price, we typically keep only the latest vote for that country
           G.active_modifiers[country] = [newModifier];
           G.resolution_log.push(`${country}: ${winningCard.type} implemented (${winningCard.duration}d).`);
         });
@@ -309,24 +321,6 @@ export const EnergyGame = {
               G.resolution_log.push(`SUBSIDY: ${from} ⇹ ${to} transit fees discounted for ${rounds} rounds.`);
             }
           }
-        });
-
-        // 3. Decrement and clean up active modifiers
-        Object.keys(G.active_modifiers).forEach(country => {
-          G.active_modifiers[country] = G.active_modifiers[country].filter(mod => {
-            mod.remaining_days--;
-            if (mod.remaining_days <= 0) {
-              G.resolution_log.push(`${mod.type} in ${country} expired.`);
-              return false;
-            }
-            return true;
-          });
-          if (G.active_modifiers[country].length === 0) delete G.active_modifiers[country];
-        });
-
-        G.active_pipe_modifiers = G.active_pipe_modifiers.filter(mod => {
-          mod.remaining_rounds--;
-          return mod.remaining_rounds > 0;
         });
 
         G.played_cards = [];
@@ -436,8 +430,31 @@ export const EnergyGame = {
              G.is_game_over = true;
            }
         }
+
+        // 3. Decrement and clean up active modifiers (End of Day)
+        Object.keys(G.active_modifiers).forEach(country => {
+          G.active_modifiers[country] = G.active_modifiers[country].filter(mod => {
+            mod.remaining_days--;
+            if (mod.remaining_days <= 0) {
+              G.resolution_log.push(`${mod.type} in ${country} expired.`);
+              return false;
+            }
+            return true;
+          });
+          if (G.active_modifiers[country].length === 0) delete G.active_modifiers[country];
+        });
+
+        G.active_pipe_modifiers = G.active_pipe_modifiers.filter(mod => {
+          mod.remaining_rounds--;
+          return mod.remaining_rounds > 0;
+        });
+
+        applyModifiersToState(G);
+
         G.phase_number++;
         G.ready_players = [];
+        G.resolution_log = []; // Clear for the next day's bidding accumulation
+        G.auction_results = []; // Clear for the next day
       },
     },
   },

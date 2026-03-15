@@ -180,6 +180,12 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                     €{pos.bid_price}/MWh
                   </span>
                 </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', gridColumn: 'span 2', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '5px' }}>
+                  SETTLEMENT<br />
+                  <span className="mono" style={{ color: 'var(--color-solar)', fontSize: '0.85rem' }}>
+                    DAY {pos.delivery_day} {pos.delivery_day === G.current_day ? '(TODAY)' : `(IN ${pos.delivery_day - G.current_day} DAYS)`}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
@@ -232,6 +238,12 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                   PRICE<br />
                   <span className="mono" style={{ color: 'var(--text-main)', fontSize: '0.85rem' }}>
                     €{bid.price}/MWh
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', gridColumn: 'span 2', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '5px' }}>
+                  DELIVERY<br />
+                  <span className="mono" style={{ color: 'var(--color-wind)', fontSize: '0.85rem' }}>
+                    DAY {bid.contract.delivery_day}
                   </span>
                 </div>
               </div>
