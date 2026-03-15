@@ -1,5 +1,5 @@
-import React from 'react';
-import type { GameState } from '../../game/types';
+import React, { useState } from 'react';
+import type { GameState, ActionCardType } from '../../game/types';
 
 interface PortfolioTabProps {
   G: GameState;
@@ -12,6 +12,18 @@ interface PortfolioTabProps {
   onSelectCard?: (cardId: string) => void;
 }
 
+const CARD_DESCRIPTIONS: Record<ActionCardType | string, string> = {
+  'POLAR_VORTEX': 'Intense cold: Wind +30%, Solar -90%, Consumption +15%, Prices +20%.',
+  'HEAT_DOME': 'Extreme heat: Solar +50%, Wind -20%, Water -30%, Consumption +10%, Prices +15%.',
+  'MONSOON': 'Heavy rain & wind: Water +40%, Wind -40%, Solar -80%, Prices +5%.',
+  'DEAD_CALM': 'Stagnant air: Wind -90%, Solar +20%, Consumption -10%, Prices -5%.',
+  'BOOST_ENERGY': 'Market manipulation: Increases local energy prices by 50%.',
+  'NERF_ENERGY': 'Market manipulation: Decreases local energy prices by 50%.',
+  'CUT_CONDUCT': 'Sabotage: Sever an interconnection pipe for 1-2 rounds.',
+  'FIX_CONDUCT': 'Maintenance: Repair a severed interconnection pipe immediately.',
+  'DISCOUNT_CONDUCT': 'Subsidy: Reduce transit fees on a pipe for 1-3 rounds.',
+};
+
 export const PortfolioTab: React.FC<PortfolioTabProps> = ({ 
   G, 
   playerID, 
@@ -22,6 +34,7 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
   selectedCardId,
   onSelectCard
 }) => {
+  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const contracts = G.contracts || {};
   const currentPhase = ctx?.phase;
   const isBiddingPhase = currentPhase === 'bidding';
@@ -92,6 +105,8 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
               return (
                 <div 
                   key={card.card_id}
+                  onMouseEnter={() => setHoveredCardId(card.card_id)}
+                  onMouseLeave={() => setHoveredCardId(null)}
                   style={{
                     border: isSelected ? '1px solid var(--color-solar)' : '1px solid var(--border-color)',
                     padding: '10px',
@@ -110,6 +125,30 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                   <div className="mono" style={{ fontSize: '0.6rem', opacity: 0.6 }}>
                     TARGET: {isPipe ? 'CONDUCT' : 'COUNTRY'}
                   </div>
+                  
+                  {hoveredCardId === card.card_id && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '100%',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '180px',
+                      background: '#1a1d23',
+                      border: '1px solid var(--color-solar)',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      zIndex: 1000,
+                      marginBottom: '10px',
+                      boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+                      pointerEvents: 'none'
+                    }}>
+                      <div className="mono" style={{ fontSize: '0.6rem', color: 'var(--color-solar)', marginBottom: '4px' }}>OPERATIONAL INTEL:</div>
+                      <div className="mono" style={{ fontSize: '0.6rem', color: 'white', lineHeight: '1.4' }}>
+                        {CARD_DESCRIPTIONS[card.type] || 'No description available.'}
+                      </div>
+                    </div>
+                  )}
+
                   <button 
                     disabled={!isActionPhase}
                     onClick={() => onSelectCard?.(card.card_id)}
