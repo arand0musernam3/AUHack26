@@ -16,6 +16,21 @@ export interface Contract {
   available_volume: number;
   base_price: number;
   bids: Bid[];
+  delivery_day: number;
+}
+
+export interface Position {
+  player_id: string;
+  contract_id: string;
+  origin_country: string;
+  energy_type: EnergyType;
+  volume: number;
+  bid_price: number;
+  base_price: number;
+  is_short: boolean;
+  day_placed: number;
+  delivery_day: number;
+  period_placed: DayPeriod;
 }
 
 export interface Conduct {
@@ -111,9 +126,9 @@ export interface GameState {
   phase_deadline: number | null;  // Unix ms timestamp, null when no timer is active
   current_day: number;
   total_days: number;
+  active_countries: string[];
   positions: Position[];
   resolution_log: string[];
-
 }
 
 export interface RouteStep {
