@@ -76,19 +76,19 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
       <div style={{ marginBottom: '25px' }}>
         <button 
           onClick={onBuyCard}
-          disabled={currentPhase === 'resolution' || G.player_balances[playerID] < 5000}
+          disabled={currentPhase === 'resolution' || G.player_balances[playerID] < 20000}
           style={{
             width: '100%',
             padding: '10px',
             background: 'rgba(255,255,255,0.05)',
             border: '1px dashed var(--border-color)',
             color: 'var(--text-main)',
-            cursor: (currentPhase === 'resolution' || G.player_balances[playerID] < 5000) ? 'not-allowed' : 'pointer',
+            cursor: (currentPhase === 'resolution' || G.player_balances[playerID] < 20000) ? 'not-allowed' : 'pointer',
             marginBottom: '15px',
             fontSize: '0.75rem'
           }}
         >
-          ACQUIRE INTEL CARD (5,000 €)
+          ACQUIRE INTEL CARD (20,000 €)
         </button>
 
         {myActionCards.length === 0 ? (
@@ -221,9 +221,14 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', gridColumn: 'span 2', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '5px' }}>
                   SETTLEMENT<br />
-                  <span className="mono" style={{ color: 'var(--color-solar)', fontSize: '0.85rem' }}>
-                    DAY {pos.delivery_day} {pos.delivery_day === G.current_day ? '(TODAY)' : `(IN ${pos.delivery_day - G.current_day} DAYS)`}
-                  </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="mono" style={{ color: 'var(--color-solar)', fontSize: '0.85rem' }}>
+                      DAY {pos.delivery_day} {pos.delivery_day === G.current_day ? '(TODAY)' : `(IN ${pos.delivery_day - G.current_day} DAYS)`}
+                    </span>
+                    <span className="mono" style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>
+                      TOTAL: €{Math.round(pos.volume * pos.bid_price).toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -281,9 +286,14 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', gridColumn: 'span 2', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '5px' }}>
                   DELIVERY<br />
-                  <span className="mono" style={{ color: 'var(--color-wind)', fontSize: '0.85rem' }}>
-                    DAY {bid.contract.delivery_day}
-                  </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="mono" style={{ color: 'var(--color-wind)', fontSize: '0.85rem' }}>
+                      DAY {bid.contract.delivery_day}
+                    </span>
+                    <span className="mono" style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>
+                      TOTAL: €{(bid.volume * bid.price).toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -322,10 +332,13 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
                 </div>
                 
                 {!isBiddingPhase && (
-                  <div style={{ display: 'flex', gap: '15px', opacity: 0.8 }}>
-                    <span className="mono" style={{ fontSize: '0.7rem' }}>VOL: {bid.volume}</span>
-                    <span className="mono" style={{ fontSize: '0.7rem' }}>PRC: €{bid.price}</span>
-                    {bid.is_short && <span className="mono" style={{ fontSize: '0.7rem', color: 'var(--color-solar)' }}>SHORT</span>}
+                  <div style={{ display: 'flex', gap: '15px', opacity: 0.8, justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <span className="mono" style={{ fontSize: '0.7rem' }}>VOL: {bid.volume}</span>
+                      <span className="mono" style={{ fontSize: '0.7rem' }}>PRC: €{bid.price}</span>
+                      {bid.is_short && <span className="mono" style={{ fontSize: '0.7rem', color: 'var(--color-solar)' }}>SHORT</span>}
+                    </div>
+                    <span className="mono" style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>TOTAL: €{(bid.volume * bid.price).toLocaleString()}</span>
                   </div>
                 )}
               </div>

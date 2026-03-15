@@ -345,17 +345,27 @@ body {
 .resolution-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.95);
   z-index: 2000;
   display: flex;
   flex-direction: column;
-  padding: 60px;
+  padding: 40px;
+  align-items: center;
+  overflow: hidden;
 }
 
 .log-container {
-  max-width: 800px;
-  margin: 40px auto;
   width: 100%;
+  max-width: 900px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border-color);
+  margin: 20px 0;
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1; /* Take available space */
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .log-entry {

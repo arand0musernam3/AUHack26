@@ -38,7 +38,7 @@ The market maintains exactly **27 open contracts** (9 countries × 3 delivery sl
 ---
 
 ## 🌪️ OPERATOR ARSENAL (Action Cards)
-Cards are your primary way to manipulate the market. You can acquire "Intel Cards" for **€5,000**.
+Cards are your primary way to manipulate the market. You can acquire "Intel Cards" for **€20,000**.
 
 | Card Type | Effect | Duration |
 | :--- | :--- | :--- |

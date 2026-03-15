@@ -69,6 +69,12 @@ export const ContractList: React.FC<ContractListProps> = ({
                   PROCESS ON<br />
                   <span className="mono" style={{ color: 'var(--color-solar)', fontSize: '0.9rem' }}>DAY {contract.delivery_day}</span>
                 </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '5px', gridColumn: 'span 2' }}>
+                  TOTAL COST (EST.)<br />
+                  <span className="mono" style={{ color: 'var(--color-wind)', fontSize: '1rem', fontWeight: 'bold' }}>
+                    €{(contract.available_volume * contract.base_price).toLocaleString()}
+                  </span>
+                </div>
               </div>
               <button 
                 className="mono"

@@ -146,7 +146,14 @@ export const GameBoard: React.FC<BoardProps> = ({ G, ctx, moves, playerID }) => 
           <h1 className="mono" style={{ textAlign: 'center', color: 'var(--color-solar)', fontSize: '2.5rem' }}>GAME OVER</h1>
           <h2 className="mono" style={{ textAlign: 'center', color: 'var(--text-main)', marginBottom: '30px' }}>FINAL MARKET LEADERBOARD</h2>
           
-          <div className="leaderboard-container mono" style={{ width: '100%', maxWidth: '600px', margin: '0 auto' }}>
+          <div className="leaderboard-container mono" style={{ 
+            width: '100%', 
+            maxWidth: '600px', 
+            margin: '0 auto',
+            maxHeight: '60vh',
+            overflowY: 'auto',
+            paddingRight: '10px'
+          }}>
             {ctx.gameover.leaderboard.map((entry: any, i: number) => (
               <div key={i} className={`leaderboard-entry ${i === 0 ? 'winner' : ''}`} style={{
                 display: 'flex',

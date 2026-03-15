@@ -507,7 +507,7 @@ export const EnergyGame = {
       G.played_cards.push(play);
     },
     buyActionCard: ({ G, playerID }) => {
-      const COST = 5000;
+      const COST = 20000;
       if (G.player_balances[playerID] < COST) return INVALID_MOVE;
       G.player_balances[playerID] -= COST;
       G.action_cards[playerID].push({
