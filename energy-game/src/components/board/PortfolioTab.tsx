@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { GameState, ActionCardType } from '../../game/types';
+import type { GameState } from '../../game/types';
 
 interface PortfolioTabProps {
   G: GameState;
@@ -7,6 +7,7 @@ interface PortfolioTabProps {
   ctx: any;
   onPlayCard?: (cardId: string, target?: string, faceDown?: boolean) => void;
   onBuyCard?: () => void;
+  onFlowEnergy?: (positionIndex: number, destinationCountry: string) => void;
   disabled?: boolean;
   selectedCardId?: string | null;
   onSelectCard?: (cardId: string) => void;
@@ -32,9 +33,10 @@ const SectionHeader = ({ title, count, label }: { title: string, count: number, 
 );
 
 export const PortfolioTab: React.FC<PortfolioTabProps> = ({ 
-  G, playerID, ctx, onBuyCard, selectedCardId, onSelectCard
+  G, playerID, ctx, onBuyCard, selectedCardId, onSelectCard, onFlowEnergy
 }) => {
   const [hover, setHover] = useState<string | null>(null);
+  const [flowingIndex, setFlowingIndex] = useState<number | null>(null);
   const contracts = G.contracts || {};
   const currentPhase = ctx?.phase;
   const isBidding = currentPhase === 'bidding';
@@ -58,6 +60,15 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
 
   const cards = G.action_cards?.[playerID] || [];
   const PIPES = ["CUT_CONDUCT", "FIX_CONDUCT", "DISCOUNT_CONDUCT"];
+
+  const getNeighbors = (country: string) => {
+    const neighbors = new Set<string>();
+    (G.conducts || []).forEach(c => {
+      if (c.origin === country) neighbors.add(c.destination);
+      if (c.destination === country) neighbors.add(c.origin);
+    });
+    return Array.from(neighbors);
+  };
 
   return (
     <div className="tab-content" style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
@@ -136,26 +147,79 @@ export const PortfolioTab: React.FC<PortfolioTabProps> = ({
         <div className="placeholder" style={{ padding: '20px 0', textAlign: 'center', opacity: 0.6 }}>No active energy positions.</div>
       ) : (
         <div className="position-list" style={{ marginBottom: '25px' }}>
-          {myPositions.map((p, i) => (
-            <div key={i} style={{ border: '1px solid var(--border-color)', padding: '12px', marginBottom: '12px', background: 'rgba(255,255,255,0.02)', position: 'relative', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '2px', height: '100%', background: p.is_short ? 'var(--color-solar)' : 'var(--color-wind)' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="mono" style={{ color: p.is_short ? 'var(--color-solar)' : 'var(--color-wind)', fontWeight: 'bold' }}>{p.origin_country} {p.is_short ? '[SHORT]' : '[LONG]'}</span>
-                <span className="mono" style={{ fontSize: '0.7rem', opacity: 0.6 }}>{p.energy_type.toUpperCase()}</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>VOLUME<br /><span className="mono" style={{ color: 'var(--text-main)', fontSize: '0.85rem' }}>{p.volume.toFixed(0)} MWh</span></div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>ENTRY PRICE<br /><span className="mono" style={{ color: 'var(--text-main)', fontSize: '0.85rem' }}>€{p.bid_price}/MWh</span></div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', gridColumn: 'span 2', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '5px' }}>
-                  SETTLEMENT<br />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span className="mono" style={{ color: 'var(--color-solar)', fontSize: '0.85rem' }}>DAY {p.delivery_day} {p.delivery_day === G.current_day ? '(TODAY)' : `(IN ${p.delivery_day - G.current_day} DAYS)`}</span>
-                    <span className="mono" style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>TOTAL: €{Math.round(p.volume * p.bid_price).toLocaleString()}</span>
+          {(G.positions || []).map((p, i) => {
+            if (p.player_id !== playerID) return null;
+            const neighbors = getNeighbors(p.origin_country);
+            const isFlowing = flowingIndex === i;
+            
+            return (
+              <div key={i} style={{ border: '1px solid var(--border-color)', padding: '12px', marginBottom: '12px', background: 'rgba(255,255,255,0.02)', position: 'relative', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '2px', height: '100%', background: p.is_short ? 'var(--color-solar)' : 'var(--color-wind)' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="mono" style={{ color: p.is_short ? 'var(--color-solar)' : 'var(--color-wind)', fontWeight: 'bold' }}>{p.origin_country} {p.is_short ? '[SHORT]' : '[LONG]'}</span>
+                  <span className="mono" style={{ fontSize: '0.7rem', opacity: 0.6 }}>{p.energy_type.toUpperCase()}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>VOLUME<br /><span className="mono" style={{ color: 'var(--text-main)', fontSize: '0.85rem' }}>{p.volume.toFixed(0)} MWh</span></div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>ENTRY PRICE<br /><span className="mono" style={{ color: 'var(--text-main)', fontSize: '0.85rem' }}>€{p.bid_price}/MWh</span></div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', gridColumn: 'span 2', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '5px' }}>
+                    SETTLEMENT<br />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="mono" style={{ color: 'var(--color-solar)', fontSize: '0.85rem' }}>DAY {p.delivery_day} {p.delivery_day === G.current_day ? '(TODAY)' : `(IN ${p.delivery_day - G.current_day} DAYS)`}</span>
+                      <span className="mono" style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>TOTAL: €{Math.round(p.volume * p.bid_price).toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
+
+                {isAction && (
+                  <div style={{ marginTop: '5px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
+                    {!isFlowing ? (
+                      <button 
+                        onClick={() => setFlowingIndex(i)}
+                        style={{ width: '100%', padding: '6px', background: 'var(--color-solar)', color: 'black', border: 'none', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 'bold' }}
+                      >
+                        FLOW ENERGY (20,000 €)
+                      </button>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <div className="mono" style={{ fontSize: '0.6rem', color: 'var(--color-solar)', marginBottom: '2px' }}>SELECT DESTINATION:</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
+                          {neighbors.map(n => {
+                            const conduct = (G.conducts || []).find(c => (c.origin === p.origin_country && n === c.destination) || (c.origin === n && p.origin_country === c.destination));
+                            const cost = conduct?.discount_active ? 10000 : 20000;
+                            const broken = conduct?.is_broken;
+                            
+                            return (
+                              <button 
+                                key={n}
+                                disabled={broken || G.player_balances[playerID] < cost}
+                                onClick={() => {
+                                  onFlowEnergy?.(i, n);
+                                  setFlowingIndex(null);
+                                }}
+                                style={{ 
+                                  padding: '5px', background: 'rgba(255,255,255,0.1)', color: broken ? 'var(--text-dim)' : 'white', 
+                                  border: '1px solid var(--border-color)', cursor: broken ? 'not-allowed' : 'pointer', fontSize: '0.6rem' 
+                                }}
+                              >
+                                {n} {broken ? '(BROKEN)' : `(${cost.toLocaleString()} €)`}
+                              </button>
+                            );
+                          })}
+                          <button 
+                            onClick={() => setFlowingIndex(null)}
+                            style={{ padding: '5px', background: 'transparent', color: 'white', border: '1px solid var(--border-color)', cursor: 'pointer', fontSize: '0.6rem', gridColumn: 'span 2' }}
+                          >
+                            CANCEL
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

@@ -80,9 +80,11 @@ function applyModifiers(G: GameState) {
 
   G.conducts.forEach(c => {
     c.is_broken = G.active_pipe_modifiers.some(m => m.type === 'CUT_CONDUCT' && 
-      m.target.from === c.origin && m.target.to === c.destination);
+      ((m.target.from === c.origin && m.target.to === c.destination) ||
+       (m.target.from === c.destination && m.target.to === c.origin)));
     c.discount_active = G.active_pipe_modifiers.some(m => m.type === 'DISCOUNT_CONDUCT' && 
-      m.target.from === c.origin && m.target.to === c.destination);
+      ((m.target.from === c.origin && m.target.to === c.destination) ||
+       (m.target.from === c.destination && m.target.to === c.origin)));
   });
 }
 
@@ -105,11 +107,13 @@ export const EnergyGame = {
     const player_balances: Record<string, number> = {};
     const player_names: Record<string, string> = {};
     const action_cards: Record<string, any[]> = {};
+    const player_history: Record<string, any[]> = {};
 
     for (let i = 0; i < ctx.numPlayers; i++) {
       const pid = i.toString();
       player_balances[pid] = 100000;
       player_names[pid] = `OP_${pid}`; 
+      player_history[pid] = [];
       action_cards[pid] = Array.from({ length: 2 }).map((_, idx) => ({
         card_id: `card-${pid}-${idx}-${Date.now()}`,
         type: ALL_CARDS[Math.floor(Math.random() * ALL_CARDS.length)],
@@ -162,6 +166,7 @@ export const EnergyGame = {
       positions: [],
       resolution_log: [],
       auction_results: [],
+      player_history,
     };
 
     applyModifiers(G);
@@ -273,6 +278,8 @@ export const EnergyGame = {
       next: "bidding",
       onEnd: ({ G }) => {
         const K_L = 0.0005, K_G = 0.0005, K_S = 0.001;
+        const dailyProfits: Record<string, number> = {};
+        Object.keys(G.player_balances).forEach(pid => dailyProfits[pid] = 0);
 
         G.positions.forEach(pos => {
           if (pos.delivery_day !== G.current_day) return;
@@ -289,15 +296,17 @@ export const EnergyGame = {
 
             price = pos.base_price + (K_L * load) - (K_G * total) + (K_S * scarcity);
             price = Math.max(5, Math.min(300, price));
-            
-            console.log(`Evaluating position for player ${pos.player_id} on contract ${pos.contract_id}:`);
-            console.log(`  Load: ${load}, Total Gen: ${total}, Type Gen: ${type}, Type Scarcity: ${scarcity}`);
-            console.log(`  Market Price: ${price.toFixed(2)}, Bid Price: ${pos.bid_price}, Volume: ${pos.volume}`);
           }
 
           const profit = pos.is_short ? (pos.bid_price - price) * pos.volume : (price - pos.bid_price) * pos.volume;
-          console.log(`  Profit/Loss for this position: ${profit.toFixed(2)}`);
           G.player_balances[pos.player_id] += (pos.bid_price * pos.volume) + profit;
+          dailyProfits[pos.player_id] += profit;
+        });
+
+        // Record history
+        Object.entries(dailyProfits).forEach(([pid, profit]) => {
+          if (!G.player_history[pid]) G.player_history[pid] = [];
+          G.player_history[pid].push({ day: G.current_day, profit });
         });
         
         G.positions = G.positions.filter(p => p.delivery_day !== G.current_day);
@@ -415,6 +424,28 @@ export const EnergyGame = {
         face_down: false,
         duration: Math.floor(Math.random() * 3) + 2,
       });
+    },
+    flowEnergy: ({ G, playerID }, positionIndex: number, destinationCountry: string) => {
+      const pos = G.positions[positionIndex];
+      if (!pos || pos.player_id !== playerID) return INVALID_MOVE;
+      
+      const conduct = G.conducts.find(c => 
+        (c.origin === pos.origin_country && c.destination === destinationCountry) ||
+        (c.origin === destinationCountry && c.destination === pos.origin_country)
+      );
+      
+      if (!conduct || conduct.is_broken) return INVALID_MOVE;
+      
+      let cost = 20000; 
+      if (conduct.discount_active) cost *= 0.5;
+      
+      if (G.player_balances[playerID] < cost) return INVALID_MOVE;
+      
+      G.player_balances[playerID] -= cost;
+      const oldCountry = pos.origin_country;
+      pos.origin_country = destinationCountry;
+      
+      G.resolution_log.push(`LOGISTIC: ${G.player_names[playerID]} rerouted energy from ${oldCountry} to ${destinationCountry} (€${cost.toLocaleString()}).`);
     },
     markReady: ({ G, playerID }) => {
       const idx = G.ready_players.indexOf(playerID);

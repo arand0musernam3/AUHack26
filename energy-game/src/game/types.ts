@@ -6,6 +6,7 @@ export interface Bid {
   player_id: string;
   price: number;
   volume: number;
+  is_short?: boolean;
 }
 
 export interface Contract {
@@ -130,6 +131,7 @@ export interface GameState {
   positions: Position[];
   resolution_log: string[];
   auction_results: string[];
+  player_history: Record<string, { day: number, profit: number }[]>;
   is_game_over?: boolean;
 }
 

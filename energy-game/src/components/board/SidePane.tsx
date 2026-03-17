@@ -55,6 +55,7 @@ export const SidePane: React.FC<SidePaneProps> = ({
               ctx={ctx}
               onPlayCard={(id, target, faceDown) => moves.playActionCard(id, target, faceDown)}
               onBuyCard={() => moves.buyActionCard()}
+              onFlowEnergy={(idx, dest) => moves.flowEnergy(idx, dest)}
               disabled={ctx.phase !== 'actionDeployment'}
               selectedCardId={selectedCardId}
               onSelectCard={onSelectCard}
@@ -68,6 +69,7 @@ export const SidePane: React.FC<SidePaneProps> = ({
               playerID={playerID}
               playerBalances={G.player_balances}
               playerNames={G.player_names}
+              playerHistory={G.player_history}
               readyPlayers={G.ready_players}
               actionCards={G.action_cards[playerID] || []}
               onBuyCard={() => moves.buyActionCard()}
